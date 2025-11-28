@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	
+	<Target Name="Debug Vars" AfterTargets="PreBuildEvent">
+		<Exec Command="echo $(GameLibsFolder) $(MSBuildThisFileDirectory)" />
+		<Exec Command="echo $(MSBuildThisFileDirectory)" />
+	</Target>
+
+	<Target Name="Clean" BeforeTargets="PreBuildEvent">
+		<Exec Command="echo $(TargetDir)" />
+		<Message Text="### Start Clean before build"
+				 Importance="high" />
+		<RemoveDir Directories="$(TargetDir)" />
+
+		<Message Text="### Finished Clean before build"
+				 Importance="high" />
+	</Target>
+
+	<!--Write mod.yaml file-->
+	<Target Name="GenerateModYaml" BeforeTargets="PrepareForRun" Condition="'$(DoNotBuildAsMod)' != 'true'">
+		<ItemGroup>
+			<ModLines Include="title: '$(ModName)'"/>
+			<ModLines Include="description: &quot;$([System.String]::Copy('$(ModDescription)').Replace('&quot;', '\&quot;'))&quot;"/>
+			<ModLines Include="staticID: $(AssemblyName)"/>
+			<!--<ModLines Include="steamID: $(SteamId)" Condition="'$(SteamId)' != ''"/>--> <!--Causes recoverable parse errors :/-->
+		</ItemGroup>
+		<WriteLinesToFile File="$(TargetDir)/mod.yaml" Overwrite="true" Lines="@(ModLines)"/>
+    <ItemGroup>
+      <FileWrites Include="$(TargetDir)/mod.yaml" Condition="Exists('$(TargetDir)/mod.yaml')"/>
+    </ItemGroup>
+	</Target>
+	<!--Write mod_info.yaml file-->
+	<Target Name="GenerateModInfoYaml" BeforeTargets="PrepareForRun" Condition="'$(DoNotBuildAsMod)' != 'true'">
+		<ItemGroup>
+			<ModInfoLines Include="minimumSupportedBuild: $(TargetGameVersion)"/>
+			<ModInfoLines Include="version: $(Version)"/>
+			<ModInfoLines Include="APIVersion: 2"/>
+			<ModInfoLines Include="requiredDlcIds:" Condition="'$(RequiredDlcIds)' != ''"/>
+			<ModInfoLines Include="$([System.String]::Copy('$(RequiredDlcIds)').Insert(0,' - ').Replace(',','%0a- '))" Condition="'$(RequiredDlcIds)' != ''"/>
+			<ModInfoLines Include="forbiddenDlcIds:" Condition="'$(ForbiddenDlcIds)' != ''"/>
+			<ModInfoLines Include="$([System.String]::Copy('$(ForbiddenDlcIds)').Insert(0,' - ').Replace(',','%0a- '))" Condition="'$(ForbiddenDlcIds)' != ''"/>
+		</ItemGroup>
+		<WriteLinesToFile File="$(TargetDir)/mod_info.yaml" Overwrite="true" Lines="@(ModInfoLines)"/>
+    <ItemGroup>
+      <FileWrites Include="$(TargetDir)/mod_info.yaml" Condition="Exists('$(TargetDir)/mod_info.yaml')"/>
+    </ItemGroup>
+	</Target>
+	
+	
+	<!--Merges all dlls in the output folder into a single dll-->
+	<Target Name="ILRepack" AfterTargets="Build" Condition="'$(IsPacked)' == 'true'">
+		<ItemGroup>
+			<InputAssemblies Include="$(TargetPath)" />
+			<InputAssemblies
+					Include="$(TargetDir)\*.dll"
+					Exclude="$(TargetPath); **/*Harmony.dll; **/Splat.dll; **/Assembly-*; **_public.dll ;**Newtonsoft.Json;**/System.*; **/Microsoft.*; **/Unity*" />
+		</ItemGroup>
+
+		<ILRepack
+		  TargetKind="SameAsPrimaryAssembly"
+		  InputAssemblies="@(InputAssemblies)"
+		  Wildcards="true"
+		  LibraryPath="$(GameLibsFolder)"
+		  OutputFile="$(TargetPath)"/>
+	</Target>
+
+	<PropertyGroup>
+		<TargetFolder Condition="'$(GameLibsFolder)' != '../Lib'">$(ModFolder)\$(TargetName)_dev\</TargetFolder>
+		<TargetFolder Condition="'$(GameLibsFolder)' == '../Lib'">../Builds\$(TargetName)</TargetFolder>
+	</PropertyGroup>
+
+	<!--Copies the mod dll, the two yaml files and everything inside the ModAssets folder to the target mod folder-->
+	<Target Name="CopyModsToDevFolder" AfterTargets="ILRepack" Condition="'$(DoNotBuildAsMod)' != 'true'">
+
+		<Message Text="Executing CopyDLLs task" Importance="High" />
+
+		<ItemGroup>
+			<ModAssets
+				Include = ".\ModAssets\**\*.*"
+				Exclude = ".\**\*.afphoto;.\**\*.mo;.\**\*.afphoto~lock~"
+				/>
+		</ItemGroup>
+
+		<Copy
+		  SourceFiles="
+			$(TargetDir)$(TargetName).dll;
+			$(TargetDir)$(TargetName).pdb;
+			$(TargetDir)mod.yaml;
+			$(TargetDir)mod_info.yaml;
+		  "
+		  
+		  DestinationFolder="$(TargetFolder)"/>
+
+		<Message Text="Copy ModAssets to $(TargetFolder)" Importance="High"></Message>
+
+		<Copy SourceFiles="@(ModAssets)" DestinationFolder="$(TargetFolder)\%(RecursiveDir)" SkipUnchangedFiles="false" Condition="'$(GameLibsFolder)' == '../Lib' Or '$(SkipAssetClone)' != 'true'"/>
+
+		<Message Text="Copied build files" Importance="High" />
+
+	</Target>
+
+
+</Project>

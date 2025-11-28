@@ -1,60 +1,47 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="$(SolutionDir)\Directory.Build.props" />
+    
+    <!-- General Package Properties -->
+    <PropertyGroup>
+        <PackageId>Example</PackageId>
+        <Version>1.0.2</Version>
+        <Authors>Apkawa</Authors>
+        <Copyright>$(AssemblyCopyright)</Copyright>
+        <RepositoryUrl>https://github.com/Apkawa/Oni-Mods</RepositoryUrl>
+    </PropertyGroup>
 
+
+    <!-- Build Properties -->
     <PropertyGroup>
         <TargetFramework>net471</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>default</LangVersion>
+        <AssemblyName>$(PackageId)</AssemblyName>
+        <RootNamespace>$(PackageId)</RootNamespace>
+        <IsMod>true</IsMod>
+        <GenerateMetadata>true</GenerateMetadata>
+<!--        Enable if added external dll like PLib -->
+        <IsPacked>true</IsPacked>
     </PropertyGroup>
-    
-    <PropertyGroup Condition=" '$(OS)' == 'Unix' ">
-        <GameConfigDir>$(HOME)/.config/unity3d/Klei/Oxygen Not Included/</GameConfigDir>
-    </PropertyGroup>
-    <PropertyGroup Condition=" '$(OS)' != 'Unix' ">
-        <GameConfigDir>%(HOMEPATH)\Documents\Klei\OxygenNotIncluded\</GameConfigDir>
+
+
+    <!-- Mod Info -->
+    <PropertyGroup>
+        <ModName>$(PackageId)</ModName>
+        <ModDescription/>
+        <SupportedContent>ALL</SupportedContent> <!-- Use "EXPANSION1_ID" for dlc only -->
+        <MinimumSupportedBuild>535211</MinimumSupportedBuild>
+        <APIVersion>2</APIVersion>
     </PropertyGroup>
     
     <PropertyGroup>
         <GameModDir>$(GameConfigDir)/mods/Dev/$(MSBuildProjectName)</GameModDir>
     </PropertyGroup>
-
+    
     <ItemGroup>
-      <Reference Include="0Harmony">
-        <HintPath>..\..\..\..\..\GAMES\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\0Harmony.dll</HintPath>
-      </Reference>
-      <Reference Include="Assembly-CSharp">
-        <HintPath>..\..\..\..\..\GAMES\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp.dll</HintPath>
-      </Reference>
-      <Reference Include="Assembly-CSharp-firstpass">
-        <HintPath>..\..\..\..\..\GAMES\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
-      </Reference>
-      <Reference Include="UnityEngine">
-        <HintPath>..\..\..\..\..\GAMES\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\UnityEngine.dll</HintPath>
-      </Reference>
-      <Reference Include="UnityEngine.CoreModule">
-        <HintPath>..\..\..\..\..\GAMES\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-      </Reference>
+      <PackageReference Include="PLib" Version="4.19.0" />
     </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Harmony" Version="0.3.0" />
-      <PackageReference Include="ILRepack" Version="2.0.44">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-    </ItemGroup>
-    
-    <Target Name="AfterBuild">
-        <Copy SourceFiles="mod_info.yaml" DestinationFolder="$(OutDir)" />
-        <Exec Command="qweqwe" />
-    </Target>
-    
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-<!--        <MakeDir Directories="" />-->
-        <MakeDir Directories="$(GameModDir)"/>
-        <Exec Command="echo $(HOME) $(OS) $(ProjectName) $(GameModDir)" />
-        <Copy SourceFiles="$(SolutionDir)/mod_info.yaml" DestinationFolder="$(GameModDir)" />
-        <Copy SourceFiles="$(OutDir)/$(ProjectName).dll" DestinationFolder="$(GameModDir)" />
-    </Target>
 
 </Project>

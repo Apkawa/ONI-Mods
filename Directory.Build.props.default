@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Instead of modifying this file, create a copy named Directory.Build.props.user and modify it to match the paths in your installation -->
+<Project>
+	<PropertyGroup>
+		<!--Gamedata Folder, adjust to your own ONI installation-->
+		<GameLibsFolder>X:\SteamLibrary\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</GameLibsFolder>
+		
+		<!--OutputModFolder, adjust it to your own dev folder-->
+		<!--Default for dev folder for WINDOWS: -->
+		<ModFolder>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\dev</ModFolder> 
+		<!-- Default for Linux -->
+		<!-- <ModFolder>$(HOME)/.config/unity3d/Klei/Oxygen Not Included/mods/Dev</ModFolder> -->
+		
+		<!--Used to generate reference assemblies for GitHub CI; set this to 0 if you don't use automatic github builds and/or don't want to install Refasmer-->
+		<RefasmerInstalled>1</RefasmerInstalled>
+	</PropertyGroup>
+</Project>

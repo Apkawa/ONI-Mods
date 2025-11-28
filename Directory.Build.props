@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+    <Import Condition=" !Exists('Directory.Build.props.user') " Project="Directory.Build.props.default"/>
+    <Import Condition=" Exists('Directory.Build.props.user') " Project="Directory.Build.props.user"/>
+
+    <PropertyGroup>
+        <Optimize>true</Optimize>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <LangVersion>preview</LangVersion>
+    </PropertyGroup>
+    <!--<UsingTask TaskName="RecursiveFolderHashing" AssemblyFile="HashService.dll"/>-->
+
+    <PropertyGroup>
+        <!--Marks Deprecated warnings as errors-->
+        <WarningsAsErrors>CS0618,CS0612</WarningsAsErrors>
+    </PropertyGroup>
+
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+        <Optimize>False</Optimize>
+    </PropertyGroup>
+
+    <!--Game Release Versions-->
+    <PropertyGroup>
+        <WhattaBlast>549456</WhattaBlast>
+        <QoL2023June>560597</QoL2023June>
+        <PackedSnacks>581003</PackedSnacks>
+        <QoL2024Feb>596100</QoL2024Feb>
+        <FrostyPlanetBeta>616718</FrostyPlanetBeta>
+        <FrostyPlanetRelease>622222</FrostyPlanetRelease>
+        <QOL2024NovBeta>641371</QOL2024NovBeta>
+        <QOL2024NovRelease>644960</QOL2024NovRelease>
+        <BionicBoostBeta>645088</BionicBoostBeta>
+        <BionicBoosterRelease>646687</BionicBoosterRelease>
+        <JanuaryHotfix1>648807</JanuaryHotfix1>
+        <JanuaryHotfix2>651155</JanuaryHotfix2>
+        <JanuaryHotfix3>652372</JanuaryHotfix3>
+        <FebruaryQOL_Beta>659075</FebruaryQOL_Beta>
+        <FebruaryQOL_Hotfix3>661174</FebruaryQOL_Hotfix3>
+        <PrehistoricRelease>674504</PrehistoricRelease>
+        <QOL2025NovBeta>699556</QOL2025NovBeta>
+        <QOL2025NovRelease>700386</QOL2025NovRelease>
+        <!--Latest-->
+        <TargetGameVersion>$(QOL2025NovRelease)</TargetGameVersion>
+    </PropertyGroup>
+
+
+    <!--Copyright notice-->
+    <PropertyGroup>
+        <CurrentYear>$([System.DateTime]::Now.ToString(`yyyy`))</CurrentYear>
+        <Author>Apkawa</Author>
+        <AssemblyCopyright>Copyright ©$(Author) $(CurrentYear)</AssemblyCopyright>
+    </PropertyGroup>
+
+    <!-- Game libs refs-->
+    <ItemGroup>
+        <!--		Reqired-->
+        <Reference Include="Assembly-CSharp">
+            <HintPath>$(GameLibsFolder)/Assembly-CSharp.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="Assembly-CSharp-firstpass">
+            <HintPath>$(GameLibsFolder)/Assembly-CSharp-firstpass.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="0Harmony">
+            <HintPath>$(GameLibsFolder)/0Harmony.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="UnityEngine">
+            <HintPath>$(GameLibsFolder)/UnityEngine.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule">
+            <HintPath>$(GameLibsFolder)/UnityEngine.CoreModule.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <!--        Optional-->
+
+        <Reference Include="Newtonsoft.Json">
+            <HintPath>$(GameLibsFolder)/Newtonsoft.Json.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <!--
+                <Reference Include="netstandard">
+                    <HintPath>$(GameLibsFolder)/netstandard.dll</HintPath>
+                    <Private>False</Private>
+                </Reference>
+                <Reference Include="FMODUnity">
+                    <HintPath>$(GameLibsFolder)/FMODUnity.dll</HintPath>
+                    <Private>False</Private>
+                </Reference>
+                <Reference Include="Unity.TextMeshPro">
+                    <HintPath>$(GameLibsFolder)/Unity.TextMeshPro.dll</HintPath>
+                    <Private>false</Private>
+                </Reference>
+                <Reference Include="UnityEngine.AssetBundleModule">
+                    <HintPath>$(GameLibsFolder)/UnityEngine.AssetBundleModule.dll</HintPath>
+                    <Private>false</Private>
+                </Reference>
+                <Reference Include="UnityEngine.PhysicsModule">
+                    <HintPath>$(GameLibsFolder)/UnityEngine.PhysicsModule.dll</HintPath>
+                    <Private>false</Private>
+                </Reference>
+                <Reference Include="UnityEngine.Physics2DModule">
+                    <HintPath>$(GameLibsFolder)/UnityEngine.Physics2DModule.dll</HintPath>
+                    <Private>false</Private>
+                </Reference>
+                <Reference Include="UnityEngine.ParticleSystemModule">
+                    <HintPath>$(GameLibsFolder)/UnityEngine.ParticleSystemModule.dll</HintPath>
+                    <Private>false</Private>
+                </Reference>
+                <Reference Include="UnityEngine.ImageConversionModule">
+                    <HintPath>$(GameLibsFolder)/UnityEngine.ImageConversionModule.dll</HintPath>
+                    <Private>false</Private>
+                </Reference>
+                <Reference Include="UnityEngine.TextRenderingModule">
+                    <HintPath>$(GameLibsFolder)/UnityEngine.TextRenderingModule.dll</HintPath>
+                    <Private>false</Private>
+                </Reference>
+                <Reference Include="UnityEngine.UI">
+                    <HintPath>$(GameLibsFolder)/UnityEngine.UI.dll</HintPath>
+                    &lt;!&ndash;<HintPath>$(SolutionDir)/PublicisedAssembly/UnityEngine.UI_public.dll</HintPath>&ndash;&gt;
+                    <Private>false</Private>
+                </Reference>
+                <Reference Include="UnityEngine.UIModule">
+                    <HintPath>$(GameLibsFolder)/UnityEngine.UIModule.dll</HintPath>
+                    <Private>false</Private>
+                </Reference>
+                <Reference Include="UnityEngine.WebRequestModule">
+                    <HintPath>$(GameLibsFolder)/UnityEngine.UnityWebRequestModule.dll</HintPath>
+                    <Private>false</Private>
+                </Reference>
+                <Reference Include="com.rlabrecque.steamworks.net">
+                    <HintPath>$(GameLibsFolder)\com.rlabrecque.steamworks.net.dll</HintPath>
+                    <Private>false</Private>
+                </Reference>
+        -->
+    </ItemGroup>
+
+
+    <ItemGroup Condition="'$(IsMod)' == 'true'">
+        <PackageReference Include="Aze.Publicise.MSBuild.Task" Version="*">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Harmony" Version="0.3.0"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(IsPacked)' == 'true'">
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="*">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+</Project>

@@ -1,8 +1,7 @@
 # Requirements
 
-* C# 12.3
-* SDK 9.0
-* .net 4.71
+* C# latest
+* .net sdk 4.71
 
 
 Copy mod_info.yaml and dll from `projectname/bin/Debug/projectname` to
@@ -10,10 +9,17 @@ Copy mod_info.yaml and dll from `projectname/bin/Debug/projectname` to
 * Windows - `%HOMEPATH%\Documents\Klei\OxygenNotIncluded\mods\dev\%MOD_NAME%`
 * Linux - `~/.config/unity3d/Klei/Oxygen Not Included/mods/Dev/$MOD_NAME`
 
-Check logs on
+Check logs 
 
 * Windows - `%HOMEPATH%\Documents\Klei\OxygenNotIncluded\Player.log`
 * Linux - `~/.config/unity3d/Klei/Oxygen Not Included/Player.log`
+
+
+# Usefull mods
+
+* [Mod Preset Manager (Light) [MPML]](https://steamcommunity.com/sharedfiles/filedetails/?id=3281716506)
+* [Debug Console](https://steamcommunity.com/sharedfiles/filedetails/?id=2041219184) for windows
+* [Debug Buttons](https://steamcommunity.com/sharedfiles/filedetails/?id=3120193648)
 
 ## Links
 * [Cairath/Oxygen-Not-Included-Modding wiki](https://github.com/Cairath/Oxygen-Not-Included-Modding/wiki)

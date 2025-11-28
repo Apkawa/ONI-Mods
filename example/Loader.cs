@@ -4,6 +4,9 @@ using Harmony;
 using UnityEngine;
 using KMod;
 
+using PeterHan.PLib.Core;
+using PeterHan.PLib.Options;
+
 
 namespace OxygenNotIncluded.Mods.Example
 {
@@ -21,6 +24,9 @@ namespace OxygenNotIncluded.Mods.Example
             Console.WriteLine(mod);
             
             Console.WriteLine($"Mod <{mod.title}> loaded: {mod.staticID}");
+            
+            PUtil.InitLibrary(false);
+            new POptions().RegisterOptions(this, typeof(ExampleModSettings));
         }
     }
 }

@@ -1,20 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-<!--    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />-->
 <!--    <Import Project="$(MSBuildThisFileDirectory)/../Directory.Build.props" />-->
     
     <!-- General Package Properties -->
     <PropertyGroup>
-        <PackageId>Example</PackageId>
-        <Version>1.0.2</Version>
+        <PackageId>BuildDoorOverWall</PackageId>
+        <Version>0.0.1</Version>
         <Authors>Apkawa</Authors>
         <Copyright>$(AssemblyCopyright)</Copyright>
         <RepositoryUrl>https://github.com/Apkawa/Oni-Mods</RepositoryUrl>
+        <TargetFrameworks>net471</TargetFrameworks>
     </PropertyGroup>
 
 
     <!-- Build Properties -->
     <PropertyGroup>
-        <TargetFramework>net471</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>default</LangVersion>
@@ -44,6 +43,5 @@
         <ProjectReference Include="..\UtilLibs\UtilLibs.csproj" />
     </ItemGroup>
 
-    
 
 </Project>

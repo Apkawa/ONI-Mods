@@ -3,6 +3,7 @@ using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 using KMod;
+using PeterHan.PLib.Core;
 
 
 // https://github.com/alex-3141/ONI-Mods/blob/master/BuildOverPlants/BuildOverPlants/BuildOverPlants.cs
@@ -26,6 +27,19 @@ namespace OxygenNotIncluded.Mods.Example
             Console.WriteLine($"Mod <{mod.title}> loaded: {mod.staticID}");
             HarmonyLib.Harmony.DEBUG = true;
             base.OnLoad(harmony);
+            
+            var doNothing = new HarmonyMethod(typeof(ExampleMod), nameof(ExampleMod.BuildingDef_IsValidPlaceLocation_Patch));
+            harmony.Patch(typeof(BuildingDef).GetMethodSafe(nameof(
+                    BuildingDef.IsValidPlaceLocation), false, 
+                    
+                    typeof(GameObject),
+                    typeof(int),
+                    typeof(Orientation),
+                    typeof(bool),
+                    typeof(string).MakeByRefType(),
+                    typeof(bool) 
+                )
+                , prefix: doNothing);
         }
 
 
@@ -95,8 +109,30 @@ namespace OxygenNotIncluded.Mods.Example
             }
         }
 
+        
+        public static bool BuildingDef_IsValidPlaceLocation_Patch(ref bool __result, ref string fail_reason)
+        {
+            
+            Console.WriteLine($"BuildingDef_IsValidPlaceLocation_Patch ${__result}, ${fail_reason} ");
+            __result = true;
+            return false;
+        }
 
-        [HarmonyPatch(typeof(BuildTool))]
+        [HarmonyPatch(typeof(BuildingDef))]
+        [HarmonyPatch(nameof(BuildingDef.IsValidReplaceLocation))]
+        [HarmonyDebug]
+        public static class BuildingDef_IsValidReplaceLocation_Patch
+        {
+            public static void Postfix(ref bool __result)
+            {
+                
+                Console.WriteLine($"BuildingDef_IsValidReplaceLocation_Patch ${__result} ");
+                
+            }
+        }
+    
+
+    [HarmonyPatch(typeof(BuildTool))]
         [HarmonyPatch("InstantBuildReplace")]
         [HarmonyDebug]
         public static class BuildTool_InstantBuildReplace_Patch

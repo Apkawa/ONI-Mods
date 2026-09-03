@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuildDoorOverWall", "BuildD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilLibs", "UtilLibs\UtilLibs.csproj", "{3606AD3B-C8FA-40E7-833E-49F3FAC20061}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DebugButton", "DebugButton\DebugButton.csproj", "{B430901D-43AD-4991-936F-8290599C4A8A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{3606AD3B-C8FA-40E7-833E-49F3FAC20061}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3606AD3B-C8FA-40E7-833E-49F3FAC20061}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3606AD3B-C8FA-40E7-833E-49F3FAC20061}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B430901D-43AD-4991-936F-8290599C4A8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B430901D-43AD-4991-936F-8290599C4A8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B430901D-43AD-4991-936F-8290599C4A8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B430901D-43AD-4991-936F-8290599C4A8A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

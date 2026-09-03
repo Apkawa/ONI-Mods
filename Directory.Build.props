@@ -52,9 +52,31 @@
         <AssemblyCopyright>Copyright ©$(Author) $(CurrentYear)</AssemblyCopyright>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <!--Normal Versions of the main dlls-->
+        <AssemblyNormal>$(GameLibsFolder)/Assembly-CSharp.dll</AssemblyNormal>
+        <AssemblyFirstpassNormal>$(GameLibsFolder)/Assembly-CSharp-firstpass.dll</AssemblyFirstpassNormal>
+        <!--Publicized Versions of the main dlls, everything here is made public-->
+        <AssemblyPublicized>$(SolutionDir)/PublicisedAssembly/Assembly-CSharp_public.dll</AssemblyPublicized>
+        <AssemblyFirstpassPublicized>$(SolutionDir)/PublicisedAssembly/Assembly-CSharp-firstpass_public.dll</AssemblyFirstpassPublicized>
+    </PropertyGroup>
+
+
     <!-- Game libs refs-->
     <ItemGroup>
+        <Reference Include="Assembly-CSharp">
+            <HintPath>$(AssemblyPublicized)</HintPath>
+            <HintPath Condition="'$(GameLibsFolder)' == '../Lib'">$(GameLibsFolder)/Assembly-CSharp_public.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="Assembly-CSharp-firstpass">
+            <HintPath>$(AssemblyFirstpassPublicized)</HintPath>
+            <HintPath Condition="'$(GameLibsFolder)' == '../Lib'">$(GameLibsFolder)/Assembly-CSharp-firstpass_public.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        
         <!--		Reqired-->
+<!--
         <Reference Include="Assembly-CSharp">
             <HintPath>$(GameLibsFolder)/Assembly-CSharp.dll</HintPath>
             <Private>False</Private>
@@ -63,6 +85,7 @@
             <HintPath>$(GameLibsFolder)/Assembly-CSharp-firstpass.dll</HintPath>
             <Private>False</Private>
         </Reference>
+-->
         <Reference Include="0Harmony">
             <HintPath>$(GameLibsFolder)/0Harmony.dll</HintPath>
             <Private>False</Private>
@@ -140,18 +163,37 @@
 
 
     <ItemGroup Condition="'$(IsMod)' == 'true'">
-        <PackageReference Include="Aze.Publicise.MSBuild.Task" Version="*">
+        <PackageReference Include="Microsoft.NETCore.App" Version="6.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="BepInEx.AssemblyPublicizer.CLI" Version="0.4.3">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
     </ItemGroup>
+<!--
+    <ItemGroup Condition="'$(IsMod)' == 'true'">
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(IsMod)' == 'true'">
+        <PackageReference Include="Aze.Publicise.MSBuild.Task" Version="1.1.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+-->
 
     <ItemGroup>
         <PackageReference Include="Harmony" Version="0.3.0"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(IsPacked)' == 'true'">
-        <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="*">
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.12">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>

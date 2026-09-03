@@ -1,0 +1,31 @@
+﻿[img]https://i.imgur.com/GbFtLZ2.png[/img]
+
+[h1]Debug Buttons[/h1]
+
+This mod adds a few buttons that give you easier access to the debug mode.
+It allows you to activate debug with a simple click instead of typing KLEIPLAY or creating the debug file.
+
+[h1]Current latest Version: 1.0.0[/h1]
+
+[hr][/hr]
+
+[h1]Features[/h1]
+[list][*] Debug Mode Button: toggles debug mode on and off. Is highlighted when debug mode is active
+[*] Debug Insta Build Button: toggles debug insta build (ctrl+f4) on and off. Is highlighted when insta build is active
+[*] Debug Superspeed Button: toggles debug superspeed (x30 speed, Ctrl+U) on and off. Is highlighted when game speed is >x10 
+[/list]
+
+[hr][/hr]
+
+[h1]Bug Reports & Local Download[/h1]
+You can find direct downloads for my mods [url=https://github.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/releases]here[/url] (please notify me if I forgot to release new versions).
+
+Please post bug reports and issues on [url=https://github.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods/issues] GitHub[/url] or on my [url=https://discord.gg/5n7peBCnWZ]Discord Server[/url]. 
+[b]Always include the full player.log in a report: [/b] https://github.com/aki-art/ONI-Mods/wiki/How-to-send-a-log
+
+[b]Make sure you do NOT have the mod "Debug Console" enabled as it breaks the game's logging and makes the log useless for debugging![/b] 
+
+[hr][/hr]
+
+Do you like the mods I made? If you want, you can support me on [url=https://www.buymeacoffee.com/sgtimalas]Buy me a coffe[/url] or [url=https://ko-fi.com/sgtimalas]Kofi[/url] :D.
+

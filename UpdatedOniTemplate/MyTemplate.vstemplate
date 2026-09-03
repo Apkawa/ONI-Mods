@@ -1,0 +1,27 @@
+<VSTemplate Version="3.0.0" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" Type="Project">
+  <TemplateData>
+    <Name>202411-ModProjectTemplate</Name>
+    <Description>Oni Mod Template</Description>
+    <ProjectType>CSharp</ProjectType>
+    <ProjectSubType>
+    </ProjectSubType>
+    <SortOrder>1000</SortOrder>
+    <CreateNewFolder>true</CreateNewFolder>
+    <DefaultName>Oni-Mod</DefaultName>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <LocationField>Enabled</LocationField>
+    <EnableLocationBrowseButton>true</EnableLocationBrowseButton>
+    <CreateInPlace>true</CreateInPlace>
+    <Icon>__TemplateIcon.png</Icon>
+  </TemplateData>
+  <TemplateContent>
+    <Project TargetFileName="TemplateProjectFile.csproj" File="TemplateProjectFile.csproj" ReplaceParameters="true">
+     
+      
+      <ProjectItem ReplaceParameters="true" TargetFileName="Mod.cs">Mod.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="ModAssets.cs">ModAssets.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="Patches.cs">Patches.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="STRINGS.cs">STRINGS.cs</ProjectItem>
+    </Project>
+  </TemplateContent>
+</VSTemplate>

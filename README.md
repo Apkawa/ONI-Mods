@@ -3,11 +3,15 @@
 * C# latest
 * .net sdk 4.71
 
+## Installation
 
-Copy mod_info.yaml and dll from `projectname/bin/Debug/projectname` to
+Ubuntu-24.04
 
-* Windows - `%HOMEPATH%\Documents\Klei\OxygenNotIncluded\mods\dev\%MOD_NAME%`
-* Linux - `~/.config/unity3d/Klei/Oxygen Not Included/mods/Dev/$MOD_NAME`
+1) sudo apt install -y dotnet-sdk-8.0
+2) dotnet tool install --global ilspycmd
+
+
+## Publicize dll
 
 Check logs 
 
@@ -33,6 +37,7 @@ Check logs
 * https://github.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods
 * https://github.com/aki-art/ONI-Mods
 * https://github.com/peterhaneve/ONIMods
+* https://github.com/Cairath/ONI-Mods
 
 ### Usefull c# hints 
 

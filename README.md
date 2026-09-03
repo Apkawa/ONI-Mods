@@ -106,6 +106,7 @@ plus, per GUID:
 ## In-game logs
 
 * Windows: `%HOMEPATH%\Documents\Klei\OxygenNotIncluded\Player.log`
+* `C:\Users\%username%\AppData\LocalLow\Klei\Oxygen Not Included\Player.log`
 * Linux: `~/.config/unity3d/Klei/Oxygen Not Included/Player.log`
 
 

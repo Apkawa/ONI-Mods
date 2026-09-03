@@ -2,13 +2,14 @@
 
 - **Game dlls:** `~/ONI/dlls`
 - **Location for store mods:** `~/ONI/mods/`
+- **Location for game log:** `~/ONI/logs/Oxygen Not Included/Player.log`
 - In the agent sandbox `~/ONI` is **read-only** (workspace-write policy): the
   `CopyModsToDevFolder` step then fails with "Read-only file system" (MSB3027).
   That is expected — artifacts stay in `bin/`, never escalate for this.
 
 # Tools
 
-- `ilspycmd ~/ONI/dlls/Assembly-CSharp.dll -o ./Assembly-CSharp -p` (decompile game code)
+- `DOTNET_ROLL_FORWARD=Major ~/.dotnet/tools/ilspycmd ~/ONI/dlls/Assembly-CSharp.dll -o ./Assembly-CSharp -p` (decompile game code)
 - Build (from repo root; caches MUST stay in `.cache/`):
   `NUGET_PACKAGES="$PWD/.cache/nuget/packages" NUGET_HTTP_CACHE_PATH="$PWD/.cache/nuget/http-cache" dotnet build ONI-mods.sln -c Debug`
 - Scratch files → `./.tmp/`, caches → `./.cache/` (both gitignored)
@@ -43,7 +44,7 @@ root: /home/apkawa/code/ONI_MODS/
 
 - ./lib_sources/Assembly-CSharp/ - decompiled Assembly-CSharp.dll 
 - ./lib_sources/Assembly-CSharp-firstpass/ - decompiled Assembly-CSharp-firstpass.dll 
-- ./lib_sources/Harmony/ - harmony git repo
+- ./lib_sources/0Harmony/ - decompiled 0Harmony.dll 
 - ./lib_sources/peterhaneve_ONIMods/PLib* - PLib sources
 
 

@@ -46,6 +46,21 @@ Backwall already. Remaining problem: hovering a door over wall/Backwall shows a 
 «free construction space required» warning even though the plan is placed correctly.
 User hint: the warning likely comes from the BuildTool visualizer path / `UpdateVis` (build/hover messages).
 
+**Rework record (2026-09-03, crash after first Stage-2 implementation):** the first implementation
+bound the two `BuildingDef` postfixes via `[HarmonyPatch(...)]` attributes (6-arg `IsValidPlaceLocation`
+and 4-arg `IsValidReplaceLocation`). In-game the game crashed at mod load with
+`HarmonyException: Undefined target method ... BuildingDef_IsValidPlaceLocation_ClearFalseReplacementWarning__Patch::Postfix`
+(see `~/ONI/logs/.../Player.log`). Root cause (orchestrator, verified): the game's Harmony v2 resolves
+attribute targets via `Type.GetMethod(name, allDeclared, null, paramTypes, [])`, which does NOT match an
+`out string` parameter against plain `typeof(string)` — only `typeof(string).MakeByRefType()` matches
+(empirical .NET test `.tmp/sigdump`; game 0Harmony decompile `.tmp/harmony_decomp`, `DeclaredMethod` :9461).
+`MakeByRefType()` is not a legal attribute-argument constant expression (CS0182), so attribute binding
+cannot express this. **Fix:** strip the `[HarmonyPatch]` attributes from both `BuildingDef` patch classes
+(`PatchAll` only processes types with `HasHarmonyAttribute`) and apply both postfixes programmatically in
+`OnLoad` via `harmony.Patch(original, postfix: new HarmonyMethod(...))`, resolving `original` with a
+byref-normalized manual matcher (`IsByRef → GetElementType`); loud `Debug.LogError` if a target is not
+found. The `DoorConfig` attribute patch (parameterless target) stays as-is (worked in-game).
+
 - [ ] Red: trace the hover/preview path — find the actual method (look for `UpdateVis`/`UpdateVisualizer` in BuildTool.cs; where `fail_reason` from non-replacement `BuildingDef.IsValidPlaceLocation` feeds the tooltip; where the preview color is set, cf. `IsValidReplaceLocation` at BuildTool.cs:178); identify exactly where the «free construction space» warning is emitted for a door hovering over a FoundationTile / Backwall occupant. Write to `./.tmp/stage2_hover_trace.md`: (a) the exact call chain, (b) why the plain validity check fails there, (c) that replacement validity (`replace_tile=true`) succeeds for the same cell (that is the failing check — the warning is false)
 - [ ] Red (continued): trace the survival drag path end-to-end with the current metadata-only Mod.cs: `BuildTool.TryBuild` → replacement fallback → `TryReplaceTile` (IsReplacementTile plan) → `Constructable.OnCompleteWork`/`FinishConstruction` candidate destruction (both door cells) + `Def.Build`; plus door-over-rock regression (native Diggable path). Confirm no code change is needed here (works in-game per user); record gaps only if found
 - [ ] Green: implement the minimal fix in `BuildDoorOverWall/Mod.cs` (door-def scoped) so the hover preview shows a valid state — no «free space» warning, correct preview color — when a valid replacement candidate exists in the door's cell; the drag path must still reach the replacement fallback (survival `TryReplaceTile` / sandbox `InstantBuildReplace`) and must NOT be diverted to plain `TryPlace`/`def.Build`

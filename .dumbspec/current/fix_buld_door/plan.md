@@ -26,15 +26,15 @@ reduced to 3 implementation-stage questions; no research finding left unwritten.
 **Commit:** `docs(fix_buld_door): research, refined spec and implementation plan`
 
 ## Stage 1 — Rewrite mod: clean skeleton + door replacement metadata
-- [ ] Red: static check script `./.tmp/fix_buld_door_checks.sh` fails on current Mod.cs (asserts: no `ExampleMod`, no `LadderConfig` patch, no `Harmony.DEBUG`, no `Console.WriteLine`, no force-valid `IsValidPlaceLocation` prefix, no `InstantBuildReplace` prefix; and `dotnet build ONI-mods.sln -c Debug` must be green at all times)
-- [ ] Rewrite `BuildDoorOverWall/Mod.cs`: single entry `UserMod2` class, correct namespace/usings (note research §1.9 — unqualified game-type resolution depends on namespace or explicit usings), remove all dead/test code (LadderConfig patch, commented TileConfig patch, logging patches, debug prints, `Harmony.DEBUG`, template name `ExampleMod`)
-- [ ] Implement `DoorConfig.CreateBuildingDef` Postfix: `ReplacementLayer = ObjectLayer.ReplacementTile`, `ReplacementCandidateLayers = { FoundationTile, Backwall }`, `ReplacementTags = { FloorTiles, Backwall, Ladders }`
-- [ ] Green: static check passes; `dotnet build ONI-mods.sln -c Debug` green; ILRepack packs UtilLibs/PLib as before
+- [x] Red: static check script `./.tmp/fix_buld_door_checks.sh` fails on current Mod.cs (asserts: no `ExampleMod`, no `LadderConfig` patch, no `Harmony.DEBUG`, no `Console.WriteLine`, no force-valid `IsValidPlaceLocation` prefix, no `InstantBuildReplace` prefix; and `dotnet build ONI-mods.sln -c Debug` must be green at all times)
+- [x] Rewrite `BuildDoorOverWall/Mod.cs`: single entry `UserMod2` class, correct namespace/usings (note research §1.9 — unqualified game-type resolution depends on namespace or explicit usings), remove all dead/test code (LadderConfig patch, commented TileConfig patch, logging patches, debug prints, `Harmony.DEBUG`, template name `ExampleMod`)
+- [x] Implement `DoorConfig.CreateBuildingDef` Postfix: `ReplacementLayer = ObjectLayer.ReplacementTile`, `ReplacementCandidateLayers = { FoundationTile, Backwall }`, `ReplacementTags = { FloorTiles, Backwall, Ladders }`
+- [x] Green: static check passes; `dotnet build ONI-mods.sln -c Debug` green; ILRepack packs UtilLibs/PLib as before
 
 **Criterion:** Mod.cs is a single small file: OnLoad boilerplate + exactly the door-def replacement-metadata patch;
 static check passes; build green; no reference anywhere in Mod.cs to ladder-config patching, forced validity,
 raw destroys, or debug logging.
-**Commit:**
+**Commit:** `refactor(fix_buld_door): rewrite mod around native replacement metadata`
 
 ## Stage 2 — Sandbox: instant wall→door replacement (fixes bugs 1 & 2)
 - [ ] Red: independent trace (ralph) of `BuildTool.TryBuild` for a door carrying the Stage-1 metadata over a FoundationTile / Backwall occupant; assert each fact line-by-line against Assembly-CSharp; record every gap (expected gaps: `candidate.Def.Replaceable` gate for vanilla foundation/backwall defs; candidate = `BuildingUnderConstruction` plan without working cancel)

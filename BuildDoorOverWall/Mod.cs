@@ -1,76 +1,25 @@
-﻿using System;
-using System.Reflection;
+using System.Collections.Generic;
 using HarmonyLib;
-using UnityEngine;
 using KMod;
-using PeterHan.PLib.Core;
 
-
-// https://github.com/alex-3141/ONI-Mods/blob/master/BuildOverPlants/BuildOverPlants/BuildOverPlants.cs
-
-
-namespace OxygenNotIncluded.Mods.Example
+// Namespace keeps the `OxygenNotIncluded` walk-up so unqualified game types
+// (BuildingDef, DoorConfig, ObjectLayer, Tag, GameTags) resolve without extra usings.
+namespace OxygenNotIncluded.Mods
 {
-    public class ExampleMod : UserMod2
+    public class Mod : UserMod2
     {
-        public override void OnLoad(HarmonyLib.Harmony harmony)
+        public override void OnLoad(Harmony harmony)
         {
-            // the assembly of this UserMod
-            Console.WriteLine(assembly.GetName());
-
-            // path to your mod's folder
-            // path; 
-
-            // the `Mod` instance for your mod
-            Console.WriteLine(mod);
-
-            Console.WriteLine($"Mod <{mod.title}> loaded: {mod.staticID}");
-            HarmonyLib.Harmony.DEBUG = true;
             base.OnLoad(harmony);
-            
-            var doNothing = new HarmonyMethod(typeof(ExampleMod), nameof(ExampleMod.BuildingDef_IsValidPlaceLocation_Patch));
-            harmony.Patch(typeof(BuildingDef).GetMethodSafe(nameof(
-                    BuildingDef.IsValidPlaceLocation), false, 
-                    
-                    typeof(GameObject),
-                    typeof(int),
-                    typeof(Orientation),
-                    typeof(bool),
-                    typeof(string).MakeByRefType(),
-                    typeof(bool) 
-                )
-                , prefix: doNothing);
         }
 
-
-        [HarmonyPatch(typeof(LadderConfig))]
-        [HarmonyPatch(nameof(LadderConfig.CreateBuildingDef))]
-        public static class LadderConfigCreateBuildingDef__Patch
-        {
-            public static void Postfix(ref BuildingDef __result)
-            {
-                __result.ReplacementTags = new List<Tag>()
-                {
-                    GameTags.FloorTiles,
-                    GameTags.Ladders,
-                    GameTags.Backwall
-                };
-            }
-        }
-
-        // [HarmonyPatch(typeof(TileConfig))]
-        // [HarmonyPatch(nameof(TileConfig.CreateBuildingDef))]
-        // public static class TileConfig_CreateBuildingDef__Patch
-        // {
-        //     public static void Postfix(ref BuildingDef __result)
-        //     {
-        //         
-        //         Console.WriteLine("TileConfig_CreateBuildingDef__Patch");
-        //         __result.ReplacementTags.Append(GameTags.Door);
-        //     }
-        // }
-
-
+        /// <summary>
+        /// Teaches the door BuildingDef the replacement metadata so the game's own
+        /// replacement flow (BuildTool / Constructable) can treat an existing
+        /// foundation tile or backwall as a replacement candidate for a door:
+        /// the door builds into ObjectLayer.ReplacementTile and replaces
+        /// FoundationTile / Backwall occupants tagged FloorTiles, Backwall or Ladders.
+        /// </summary>
         [HarmonyPatch(typeof(DoorConfig))]
         [HarmonyPatch(nameof(DoorConfig.CreateBuildingDef))]
         public static class DoorConfig_CreateBuildingDef__Patch
@@ -81,95 +30,14 @@ namespace OxygenNotIncluded.Mods.Example
                 __result.ReplacementCandidateLayers = new List<ObjectLayer>()
                 {
                     ObjectLayer.FoundationTile,
-                    ObjectLayer.LadderTile,
                     ObjectLayer.Backwall
                 };
                 __result.ReplacementTags = new List<Tag>()
                 {
-                    GameTags.Door,
-                    GameTags.Ladders,
                     GameTags.FloorTiles,
-                    GameTags.Backwall
+                    GameTags.Backwall,
+                    GameTags.Ladders
                 };
-                __result.EquivalentReplacementLayers = new List<ObjectLayer>()
-                {
-                    ObjectLayer.ReplacementTile,
-                    ObjectLayer.ReplacementLadder
-                };
-            }
-        }
-
-        [HarmonyPatch(typeof(DoorConfig))]
-        [HarmonyPatch(nameof(DoorConfig.DoPostConfigureComplete))]
-        public static class DoorConfig_DoPostConfigureComplete__Patch
-        {
-            public static void Postfix(ref GameObject go)
-            {
-                go.GetComponent<KPrefabID>().AddTag(GameTags.FloorTiles);
-            }
-        }
-
-        
-        public static bool BuildingDef_IsValidPlaceLocation_Patch(ref bool __result, ref string fail_reason)
-        {
-            
-            Console.WriteLine($"BuildingDef_IsValidPlaceLocation_Patch ${__result}, ${fail_reason} ");
-            __result = true;
-            return false;
-        }
-
-        [HarmonyPatch(typeof(BuildingDef))]
-        [HarmonyPatch(nameof(BuildingDef.IsValidReplaceLocation))]
-        [HarmonyDebug]
-        public static class BuildingDef_IsValidReplaceLocation_Patch
-        {
-            public static void Postfix(ref bool __result)
-            {
-                
-                Console.WriteLine($"BuildingDef_IsValidReplaceLocation_Patch ${__result} ");
-                
-            }
-        }
-    
-
-    [HarmonyPatch(typeof(BuildTool))]
-        [HarmonyPatch("InstantBuildReplace")]
-        [HarmonyDebug]
-        public static class BuildTool_InstantBuildReplace_Patch
-        {
-            public static bool Prefix(ref BuildTool __instance, int cell, Vector3 pos,
-                GameObject tile,
-                ref BuildingDef ___def
-            )
-            {
-                if (___def.ReplacementCandidateLayers != null && ___def.WidthInCells > 1 || ___def.HeightInCells > 1)
-                {
-                    for (int index1 = 0; index1 < ___def.PlacementOffsets.Length; ++index1)
-                    {
-                        CellOffset rotatedCellOffset1 =
-                            Rotatable.GetRotatedCellOffset(___def.PlacementOffsets[index1],
-                                __instance.GetBuildingOrientation);
-
-
-                        int cell1 = Grid.OffsetCell(cell, rotatedCellOffset1);
-                        if (cell == cell1)
-                        {
-                            continue;
-                        }
-
-                        foreach (var layer in ___def.ReplacementCandidateLayers)
-                        {
-                            if (Grid.ObjectLayers[(int)layer].ContainsKey(cell1))
-                            {
-                                GameObject tile1 = Grid.ObjectLayers[(int)layer][cell1];
-                                Console.WriteLine("5");
-                                UnityEngine.Object.Destroy((UnityEngine.Object)tile1);
-                            }
-                        }
-                    }
-                }
-
-                return true;
             }
         }
     }

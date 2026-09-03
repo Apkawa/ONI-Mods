@@ -7,7 +7,7 @@
 # Tools
 
 - `ilspycmd ~/ONI/dlls/Assembly-CSharp.dll -o ./Assembly-CSharp -p`
-- `dotnet`
+- `dotnet build`
 
 # Docs and example mods
 

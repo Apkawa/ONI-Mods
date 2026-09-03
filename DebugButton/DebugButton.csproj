@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<!-- General Package Properties -->
 	<PropertyGroup>
@@ -7,7 +7,7 @@
 		<Authors>Sgt_Imalas, Apkawa</Authors>
 		<Copyright>$(AssemblyCopyright)</Copyright>
 		<RepositoryUrl>https://github.com/Apkawa/Oni-Mods</RepositoryUrl>
-		<TargetFrameworks>net471</TargetFrameworks>
+		<TargetFramework>net48</TargetFramework>
 	</PropertyGroup>
 
 

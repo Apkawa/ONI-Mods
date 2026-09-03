@@ -373,3 +373,7 @@ FodyWeavers.xsd
 /.editorconfig
 /UtilLibs/ErrorRemoval.cs
 /.ReleasedModFiles/Desc.md
+
+# Local scratch and package caches (session conventions, see AGENTS.md)
+.tmp/
+.cache/

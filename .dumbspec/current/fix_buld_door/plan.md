@@ -12,6 +12,9 @@ game flow against `/home/apkawa/code/ONI_MODS/Assembly-CSharp` performed by an i
 "Red" = the check fails before implementation; "green" = check + `dotnet build ONI-mods.sln -c Debug` pass.
 Final in-game verification is a manual step for the user (checklist in Stage 4).
 
+**User journal note:** `checks.md` in the task dir is the user's manual in-game verification journal —
+the orchestrator does NOT modify it.
+
 Legend: `[ ]` not started · `[~]` in progress · `[x]` done.
 
 ---
@@ -36,29 +39,40 @@ static check passes; build green; no reference anywhere in Mod.cs to ladder-conf
 raw destroys, or debug logging.
 **Commit:** `refactor(fix_buld_door): rewrite mod around native replacement metadata`
 
-## Stage 2 — Sandbox: instant wall→door replacement (fixes bugs 1 & 2)
-- [ ] Red: independent trace (ralph) of `BuildTool.TryBuild` for a door carrying the Stage-1 metadata over a FoundationTile / Backwall occupant; assert each fact line-by-line against Assembly-CSharp; record every gap (expected gaps: `candidate.Def.Replaceable` gate for vanilla foundation/backwall defs; candidate = `BuildingUnderConstruction` plan without working cancel)
-- [ ] Implementation: close gaps so that sandbox drag of the door over a wall → `BuildTool.cs:350` replacement fallback → `InstantBuildReplace` → wall candidate destroyed (both door cells via the multi-cell branch) → `def.Build` spawns the door
-- [ ] If vanilla foundation/backwall defs are not `Replaceable`, patch their defs (`Replaceable = true`) via config Postfixes — same technique as the donor mod's TilePOI patch
-- [ ] Bug 2: when the replacement candidate is a plan (`BuildingUnderConstruction`), cancel it properly — trigger `GameHashes.Cancel` (2127324410) so `Constructable.OnCancel` clears materials/uproots — instead of / before raw destroy, so no orphan Diggables/chores remain
-- [ ] Green: static check + full build + independent re-trace confirms: door over foundation → wall gone, door built; door over wall plan → plan cancelled, no orphans; no force-validity bypass remains in Mod.cs
+## Stage 2 — Survival mode: hover-warning fix + flow verification (priority per user)
 
-**Criterion:** independent acceptance trace (code-level, against Assembly-CSharp) shows the complete sandbox flow is handled by game code paths with at most the minimal Mod patches; build green.
+Context: in-game check after Stage 1 (user journal `checks.md`) — in survival a door replaces wall and
+Backwall already. Remaining problem: hovering a door over wall/Backwall shows a false
+«free construction space required» warning even though the plan is placed correctly.
+User hint: the warning likely comes from the BuildTool visualizer path / `UpdateVis` (build/hover messages).
+
+- [ ] Red: trace the hover/preview path — find the actual method (look for `UpdateVis`/`UpdateVisualizer` in BuildTool.cs; where `fail_reason` from non-replacement `BuildingDef.IsValidPlaceLocation` feeds the tooltip; where the preview color is set, cf. `IsValidReplaceLocation` at BuildTool.cs:178); identify exactly where the «free construction space» warning is emitted for a door hovering over a FoundationTile / Backwall occupant. Write to `./.tmp/stage2_hover_trace.md`: (a) the exact call chain, (b) why the plain validity check fails there, (c) that replacement validity (`replace_tile=true`) succeeds for the same cell (that is the failing check — the warning is false)
+- [ ] Red (continued): trace the survival drag path end-to-end with the current metadata-only Mod.cs: `BuildTool.TryBuild` → replacement fallback → `TryReplaceTile` (IsReplacementTile plan) → `Constructable.OnCompleteWork`/`FinishConstruction` candidate destruction (both door cells) + `Def.Build`; plus door-over-rock regression (native Diggable path). Confirm no code change is needed here (works in-game per user); record gaps only if found
+- [ ] Green: implement the minimal fix in `BuildDoorOverWall/Mod.cs` (door-def scoped) so the hover preview shows a valid state — no «free space» warning, correct preview color — when a valid replacement candidate exists in the door's cell; the drag path must still reach the replacement fallback (survival `TryReplaceTile` / sandbox `InstantBuildReplace`) and must NOT be diverted to plain `TryPlace`/`def.Build`
+- [ ] Green: `./.tmp/fix_buld_door_checks.sh` passes (extend it with new assertions if needed, never weaken existing ones); full build green
+- [ ] Refactor: keep the fix minimal and commented (English, game file:line references)
+
+**Criterion:** independent acceptance trace (code-level) shows: (a) hover over foundation/Backwall with the door → the visualizer path no longer emits the «free space» warning (validity true when a replacement candidate is valid); (b) survival drag still takes the replacement path (IsReplacementTile plan) and door-over-rock is unchanged; build green.
 **Commit:**
 
-## Stage 3 — Survival: queued wall removal + door build
-- [ ] Red: independent trace of the survival path: door plan via `BuildingDef.TryReplaceTile` (IsReplacementTile=true), grid write `Grid.Objects[cell, ReplacementLayer]`, then `Constructable.OnCompleteWork`/`FinishConstruction` multi-cell candidate destruction, door over solid ore → `Diggable` per cell (research §2.8)
-- [ ] Implementation: close any gaps found (e.g. candidate lookup/anchor-cell mismatch for the 1×2 door; refund of destroyed wall materials via `Deconstructable.SpawnItemsFromConstruction` if the candidate is deconstructable — verify it is)
-- [ ] Verify cancel-tool compatibility: `CancelTool`/user-menu cancel on the door replacement plan behaves natively (Diggables removed in `OnCleanUp`)
+## Stage 3 — Sandbox: instant wall→door replacement (DEFERRED — user focuses on survival first)
+
+Note: the Stage-1 in-game check proved the replacement candidate gate (`Replaceable`/`CanReplace`)
+already passes for wall/Backwall in survival; re-verify what specifically is missing in InstantBuild mode
+and do not duplicate fixes that Stage 2 already made.
+
+- [ ] Red: independent trace of `BuildTool.TryBuild` in InstantBuild mode for the door def over a FoundationTile / Backwall occupant; assert each fact line-by-line against Assembly-CSharp; record every gap (does the normal gate at BuildTool.cs:325 still pass over a foundation so `def.Build` fires instead of the replacement fallback? what does the multi-cell branch of `InstantBuildReplace` cover/miss?)
+- [ ] Implementation: close gaps so that sandbox drag of the door over a wall → `BuildTool.cs:350` replacement fallback → `InstantBuildReplace` → wall candidate destroyed (both door cells) → `def.Build` spawns the door
+- [ ] Bug 2: when the replacement candidate is a plan (`BuildingUnderConstruction`), cancel it properly — trigger `GameHashes.Cancel` (2127324410) so `Constructable.OnCancel` clears materials/uproots — before/instead of raw destroy, so no orphan Diggables/chores remain
 - [ ] Green: static check + full build + independent re-trace
 
-**Criterion:** independent acceptance trace shows: survival door-over-wall → wall enters removal (dig/deconstruct) queue, door enters build queue, both complete by workers; door-over-rock keeps working as before; build green.
+**Criterion:** independent acceptance trace (code-level) shows the complete sandbox flow: door over foundation → wall gone, door built; door over wall plan → plan cancelled, no orphans; build green.
 **Commit:**
 
 ## Stage 4 — Finalization
 - [ ] Full review pass of Mod.cs (naming, comments, no leftovers), confirm csproj/Directory.Build.* untouched (build invariants)
 - [ ] Fresh full build; confirm bin/ artifacts: repacked mod dll (UtilLibs+PLib packed), mod.yaml/staticID=BuildDoorOverWall
-- [ ] Write in-game verification checklist for the user (Russian), covering: sandbox door-over-foundation, sandbox door-over-backwall, sandbox door-over-wall-plan (bug 2), survival door-over-foundation (queue), survival door-over-rock (regression), ladder placement (regression, LadderConfig patch removed)
+- [ ] Prepare in-game verification checklist for the user (Russian) in the final report (user keeps their own journal in `checks.md` — do not modify it), covering: survival door-over-wall (queue), survival door-over-rock (regression), hover warning over wall/Backwall (fixed), sandbox door-over-foundation, sandbox door-over-backwall, sandbox door-over-wall-plan (bug 2), ladder placement (regression, LadderConfig patch removed)
 - [ ] Update plan journal, archive task per dumbspec layout
 
 **Criterion:** clean full build; repacked dll in bin/; checklist delivered; all earlier-stage checkboxes [x].

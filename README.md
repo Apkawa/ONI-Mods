@@ -122,6 +122,7 @@ plus, per GUID:
 * https://github.com/O-n-y/OxygenNotIncludedModTemplate
 * https://gist.github.com/EliteMasterEric/cc9f0271af9410aec32ead637efe7741
 * https://harmony.pardeike.net/articles/patching-prefix.html
+* https://github.com/javisar/ONI-Modloader
 
 ### Mod examples
 * https://github.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods

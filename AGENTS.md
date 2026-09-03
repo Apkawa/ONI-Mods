@@ -42,6 +42,7 @@ root: /home/apkawa/code/ONI_MODS/
 ## Library source
 
 - ./lib_sources/Assembly-CSharp/ - decompiled Assembly-CSharp.dll 
+- ./lib_sources/Assembly-CSharp-firstpass/ - decompiled Assembly-CSharp-firstpass.dll 
 - ./lib_sources/Harmony/ - harmony git repo
 - ./lib_sources/peterhaneve_ONIMods/PLib* - PLib sources
 

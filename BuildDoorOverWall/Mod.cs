@@ -86,6 +86,16 @@ namespace OxygenNotIncluded.Mods
             {
                 harmony.Patch(validReplace, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidReplaceLocation_DoorReplacement__Patch), nameof(BuildingDef_IsValidReplaceLocation_DoorReplacement__Patch.Postfix)));
             }
+            // 3. Stage 2.1: BuildTool.TryBuild(int) — private method, resolved like the others.
+            MethodInfo tryBuild = FindMethod(typeof(BuildTool), "TryBuild", typeof(int));
+            if (tryBuild == null)
+            {
+                UnityEngine.Debug.LogError("[BuildDoorOverWall] could not resolve BuildTool.TryBuild(int) — upper-cell replacement fallback postfix skipped (game build mismatch?)");
+            }
+            else
+            {
+                harmony.Patch(tryBuild, postfix: new HarmonyMethod(typeof(BuildTool_TryBuild_DoorReplacement__Patch), nameof(BuildTool_TryBuild_DoorReplacement__Patch.Postfix)));
+            }
         }
 
         /// <summary>
@@ -194,17 +204,36 @@ namespace OxygenNotIncluded.Mods
             {
                 return false;
             }
-            GameObject candidate = def.GetReplacementCandidate(cell);
+            // Area-aware replacement-candidate search: the door is 1x2 and the candidate (wall) may
+            // sit in EITHER door cell. GetReplacementCandidate is single-cell (BuildingDef.cs:324);
+            // the anchor-only lookup is why a door with its upper cell on the wall (anchor = lower
+            // cell, GenerateOffsets BuildingDef.cs:1795) showed a red ghost and could not be placed
+            // (Stage 2.1). Iterate the whole door area with the same per-cell gate the native fallback
+            // uses; anchor-first order is preserved (RunOnArea visits offset (0,0) first).
+            GameObject candidate = null;
+            def.RunOnArea(cell, orientation, (c) =>
+            {
+                if (candidate != null)
+                {
+                    return;
+                }
+                GameObject local = def.GetReplacementCandidate(c);
+                if (local == null)
+                {
+                    return;
+                }
+                BuildingComplete complete = local.GetComponent<BuildingComplete>();
+                if (complete == null || !complete.Def.Replaceable)
+                {
+                    return;
+                }
+                if (!def.CanReplace(local))
+                {
+                    return;
+                }
+                candidate = local;
+            });
             if (candidate == null)
-            {
-                return false;
-            }
-            BuildingComplete complete = candidate.GetComponent<BuildingComplete>();
-            if (complete == null || !complete.Def.Replaceable)
-            {
-                return false;
-            }
-            if (!def.CanReplace(candidate))
             {
                 return false;
             }
@@ -293,6 +322,143 @@ namespace OxygenNotIncluded.Mods
                 if (IsReplacementPlacementPossible(__instance, null, Grid.PosToCell(pos), orientation))
                 {
                     __result = true;
+                }
+            }
+        }
+
+        // 3. Survival drag: a 1x2 door whose replacement candidate sits in the NON-anchor cell
+        // (upper cell on the wall, lower/anchor cell in the air) could never be placed: the
+        // replacement fallback in BuildTool.TryBuild (BuildTool.cs:350-385) looks for a candidate
+        // only in the anchor cell (BuildTool.cs:352; GetReplacementCandidate is single-cell,
+        // BuildingDef.cs:324). Every vanilla replacement def is 1x1, so that anchor-only gate was
+        // never exercised by a multi-cell def; the door (1x2) is the first. This postfix replicates
+        // the native fallback for exactly that case: it fires only when TryBuild produced no
+        // replacement plan at the anchor, and creates the plan with the same calls the native tail
+        // uses (BuildTool.cs:377-379). Completion then takes the game's designed multi-cell path:
+        // Constructable finds no candidate at the anchor, so FinishConstruction's RunOnArea
+        // (Constructable.cs:~225-256) destroys the candidate in each non-anchor cell (returns its
+        // items to the worker, Trigger(1606648047), DeleteObject).
+        // Deliberately NOT patching BuildingDef.GetReplacementCandidate to be area-aware: that would
+        // make Constructable's anchor branch (Constructable.cs:161) also find the upper-cell
+        // candidate and could double-handle it (deferred DestroySelf still in the Grid when
+        // FinishConstruction's RunOnArea re-looks at the cell).
+        // NO [HarmonyPatch] attributes on purpose: TryBuild is private — attached programmatically
+        // in OnLoad via harmony.Patch(...) like the other two BuildingDef postfixes.
+        public static class BuildTool_TryBuild_DoorReplacement__Patch
+        {
+            public static void Postfix(BuildTool __instance, int __0)
+            {
+                BuildingDef def = __instance.def;
+                if (def == null || def.PrefabID != DoorConfig.ID)
+                {
+                    return;
+                }
+                if (def.ReplacementLayer == ObjectLayer.NumLayers)
+                {
+                    return;
+                }
+                // Mirror TryBuild's early-return guard (BuildTool.cs:309): if the native method
+                // bailed out there was no build attempt to complete.
+                GameObject visualizer = __instance.visualizer;
+                if (visualizer == null)
+                {
+                    return;
+                }
+                if (Grid.PosToCell(visualizer) != __0 && (def.BuildingComplete.GetComponent<LogicPorts>() != null || def.BuildingComplete.GetComponent<LogicGateBase>() != null))
+                {
+                    return;
+                }
+                // A replacement plan already at the anchor (created natively or by a previous drag
+                // event) means the placement already happened.
+                if (Grid.Objects[__0, (int)def.ReplacementLayer] != null)
+                {
+                    return;
+                }
+                // Instant-build mode: the native fallback takes InstantBuildReplace (Stage 3,
+                // deferred) — do not interfere.
+                if (DebugHandler.InstantBuildMode || (Game.Instance.SandboxModeActive && SandboxToolParameterMenu.instance.settings.InstantBuild))
+                {
+                    return;
+                }
+                IList<Tag> selected = __instance.selectedElements;
+                if (selected == null || selected.Count == 0)
+                {
+                    return;
+                }
+                // Area-aware candidate with the native gate (BuildTool.cs:352-364).
+                GameObject candidate = null;
+                def.RunOnArea(__0, __instance.buildingOrientation, (c) =>
+                {
+                    if (candidate != null)
+                    {
+                        return;
+                    }
+                    GameObject local = def.GetReplacementCandidate(c);
+                    if (local == null)
+                    {
+                        return;
+                    }
+                    BuildingComplete complete = local.GetComponent<BuildingComplete>();
+                    if (complete == null || !complete.Def.Replaceable)
+                    {
+                        return;
+                    }
+                    if (!def.CanReplace(local))
+                    {
+                        return;
+                    }
+                    candidate = local;
+                });
+                if (candidate == null)
+                {
+                    return;
+                }
+                // The replacement layer must be unoccupied in every door cell (BuildTool.cs:354-360).
+                bool occupied = false;
+                def.RunOnArea(__0, __instance.buildingOrientation, (c) =>
+                {
+                    if (def.IsReplacementLayerOccupied(c))
+                    {
+                        occupied = true;
+                    }
+                });
+                if (occupied)
+                {
+                    return;
+                }
+                // Native element gate (BuildTool.cs:366-371): proceed only when the candidate def
+                // differs from ours or the selected element differs from the candidate's element
+                // (the 1542131326 hash is the native snow-tag quirk).
+                Tag tag = candidate.GetComponent<PrimaryElement>().Element.tag;
+                if (tag.GetHash() == 1542131326)
+                {
+                    tag = SimHashes.Snow.CreateTag();
+                }
+                if (candidate.GetComponent<BuildingComplete>().Def == def && selected[0] == tag)
+                {
+                    return;
+                }
+                // Create the plan exactly like the native fallback tail (BuildTool.cs:377-379).
+                Vector3 pos = Grid.CellToPosCBC(__0, Grid.SceneLayer.Building);
+                GameObject plan = def.TryReplaceTile(visualizer, pos, __instance.buildingOrientation, selected, __instance.facadeID);
+                Grid.Objects[__0, (int)def.ReplacementLayer] = plan;
+                // The native PostProcessBuild already ran with a null build result, so mirror its
+                // master-priority assignment (BuildTool.cs:440-448); the placement sound is
+                // intentionally skipped.
+                if (plan != null)
+                {
+                    Prioritizable prioritizable = plan.GetComponent<Prioritizable>();
+                    if (prioritizable != null)
+                    {
+                        if (BuildMenu.Instance != null)
+                        {
+                            prioritizable.SetMasterPriority(BuildMenu.Instance.GetBuildingPriority());
+                        }
+                        if (PlanScreen.Instance != null)
+                        {
+                            prioritizable.SetMasterPriority(PlanScreen.Instance.GetBuildingPriority());
+                        }
+                    }
                 }
             }
         }

@@ -86,6 +86,68 @@ routing is untouched. The tint patch (`IsValidReplaceLocation`) and DoorConfig p
 **Acceptance:** independent audit ACCEPT, 10/10 checks PASS (full trace `.tmp/acceptance_stage2.md`): target uniqueness, game-Harmony v2 postfix binding legality (no `__out_`/positional-`__N` misuse — the round-2 crash class), no recursion, hover/drag/rock/vanilla behavior, door-def scope, build green, packed dll with one UserMod2.
 **Commit:** 792c568
 
+## Stage 2.1 — Survival: door with the wall in its UPPER (non-anchor) cell (user in-game report)
+
+**User report:** the Stage-2 hover fix is confirmed in-game (no red warning). New bug: a 1×2 door
+positioned so that only its UPPER cell sits on the wall (lower cell in air) → build ghost turns red
+and the door cannot be placed at all; the inverse (lower cell on wall, upper in air) works.
+
+**Red trace (orchestrator, verified against `.tmp/game_decomp`):**
+1. Door `PlacementOffsets` = [(0,0),(0,1)] (`GenerateOffsets`, BuildingDef.cs:1795-1812) →
+   **anchor = the door's LOWER cell** (rotations handled by `Rotatable.GetRotatedCellOffset` in
+   `RunOnArea`, BuildingDef.cs:819).
+2. `GetReplacementCandidate(cell)` is single-cell (BuildingDef.cs:324-346).
+3. `BuildTool.TryBuild` (BuildTool.cs:311-387): plain `TryPlace` fails over the wall; the replacement
+   fallback (BuildTool.cs:350-385) looks for a candidate **only in the anchor cell**
+   (`def.GetReplacementCandidate(cell)`, BuildTool.cs:352). Wall in the upper cell → candidate null →
+   fallback skipped → no plan. Context: every vanilla replacement def is 1×1 (foundation, ladder,
+   exterior wall, moulding, window), so the anchor-only gate was never exercised by a multi-cell def;
+   the door (1×2) is the first.
+4. The Stage-2 helper `IsReplacementPlacementPossible` used the same anchor-only lookup → false →
+   red tint through both cosmetic postfixes (consistent with the user's red ghost).
+5. The rest of the chain already works for this case if a plan is created: the 6-arg
+   `IsValidPlaceLocation(replace_tile:true)` passes (per-cell candidate whitelisting,
+   BuildingDef.cs:580-585; backwall tolerated when `replacement_tile=true`, `IsValidTileLocation`
+   BuildingDef.cs:805-826; air cell clear; logic-port check is conflict-based,
+   `AreLogicPortsInValidPositions` BuildingDef.cs:779+); completion takes the game's DESIGNED
+   multi-cell path — `Constructable` finds no candidate at the anchor → `FinishConstruction`'s
+   `RunOnArea` (Constructable.cs:~225-256) destroys the candidate in each NON-anchor cell
+   (DestroySelf / Deconstructable.SpawnItemsFromConstruction returns the metal /
+   Trigger(1606648047) / DeleteObject).
+
+**Fix (two parts, both door-def-scoped):**
+- A. Helper: anchor-only candidate lookup → area-aware search (`RunOnArea` + single-cell
+  `GetReplacementCandidate` per cell, same BuildingComplete/Replaceable/CanReplace gate,
+  anchor-first order preserved — offset (0,0) is visited first).
+- B. New postfix on `BuildTool.TryBuild(int cell)` (private method → NO attribute, programmatic
+  patch in OnLoad, positional `__0`): fires only when TryBuild produced no replacement plan at the
+  anchor (checks `Grid.Objects[cell, ReplacementLayer] == null`), door scope, native early-return
+  guard mirrored (BuildTool.cs:309: visualizer null / visualizer cell ≠ drag cell when the def has
+  LogicPorts/LogicGateBase), survival mode only (instant mode → native InstantBuildReplace, Stage 3
+  deferred). Then mirrors the native fallback gate (area-aware candidate with
+  BuildingComplete/Replaceable/CanReplace, per-cell `IsReplacementLayerOccupied` clear, native
+  element-tag gate incl. the snow-hash quirk, BuildTool.cs:366-371) and creates the plan with the
+  exact native tail calls (`def.TryReplaceTile(visualizer, pos, orientation, selectedElements,
+  facadeID)` + `Grid.Objects[cell, ReplacementLayer] = plan`, BuildTool.cs:377-379), plus the
+  `PostProcessBuild` master-priority mirror (BuildTool.cs:440-448) since the native call already ran
+  with a null result.
+  **Why NOT patch `GetReplacementCandidate` to be area-aware instead:** that would make Constructable's
+  anchor branch (Constructable.cs:161) also find the upper-cell candidate and destroy it in the
+  single-cell branch, while `FinishConstruction`'s `RunOnArea` could then re-encounter it (deferred
+  `DestroySelf` still in the Grid) and double-handle it (double item spawn). Patching `TryBuild`
+  keeps the completion flow on the designed multi-cell path (no candidate at anchor → RunOnArea
+  branch), zero new risk.
+- [x] Green: implement A + B in Mod.cs (English comments, game file:line references) — direct field access compiled (Publicizer), no reflection fallback needed
+- [x] Green: extend `./.tmp/fix_buld_door_checks.sh` (new static checks, existing ones never weakened) + full build green (0 CS errors; only tolerated MSB3027/3021 into read-only ~/ONI)
+- [x] Acceptance: independent audit — `.tmp/acceptance_stage21.md`, 5/5 PASS (target scenario, completion exactly-once, all regressions, compile-level, build state). Auditor's note: the Stage-2 4-arg flip also affects the instant gate (BuildTool.cs:325) — in sandbox instant mode a door builds free over a wall without destroying it; that is the deferred Stage-3 scope, not a Stage-2.1 violation
+
+**Criterion:** independent acceptance trace shows: (a) upper-wall door drag → replacement plan queued
+at the anchor (IsReplacementTile), completion destroys the upper-cell wall and returns its items;
+(b) lower-wall door drag unchanged (native path, no double plan — the postfix bails when a plan
+already exists); (c) hover green for both orientations; (d) door-over-rock, vanilla defs, instant
+mode untouched; build green.
+**Commit:** `fix(fix_buld_door): stage 2.1 — door replacement when the wall is in the upper (non-anchor) cell`
+
 ## Stage 3 — Sandbox: instant wall→door replacement (DEFERRED — user focuses on survival first)
 
 Note: the Stage-1 in-game check proved the replacement candidate gate (`Replaceable`/`CanReplace`)

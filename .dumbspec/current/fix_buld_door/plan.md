@@ -148,6 +148,73 @@ already exists); (c) hover green for both orientations; (d) door-over-rock, vani
 mode untouched; build green.
 **Commit:** `fix(fix_buld_door): stage 2.1 — door replacement when the wall is in the upper (non-anchor) cell`
 
+## Stage 2.2 — Generalize to ALL door types + future-proof for DLC/mod doors (user in-game report)
+
+**User report:** Stage 2.1 works for the pneumatic door (Pneumatic Door, `DoorConfig`). Not for:
+Wicker Door (`WoodenDoorConfig`, "плетёная дверь", DLC2-gated), Manual Airlock
+(`ManualPressureDoorConfig`), Insulated Door (`InsulatedDoorConfig`), Mechanized Airlock
+(`PressureDoorConfig`). User wants it to cover all doors and ideally future doors added by DLC or
+mods (reference: peterhaneve `AirlockDoor` mod).
+
+**Research (`.tmp/research_stage22.md`):**
+- No `BuildCategories` type in the build; "Doors" category membership is hardcoded static lists
+  (BuildMenu.cs:151-159, TUNING/BUILDINGS.cs:687-709) — NOT a def property, NOT future-proof.
+- No shared door base class; no shared KPrefabID tag (`GameTags.Door` is only ever the value of
+  `CopyBuildingSettings.copyGroupTag`, never AddTag-ed onto prefabs, §4).
+- Universal door test = composite of the two signals that exist:
+  (1) `def.BuildingComplete.GetComponent<CopyBuildingSettings>().copyGroupTag == GameTags.Door` —
+  covers all five buildable doors (Door :38, PressureDoor :41, WoodenDoor :60, ManualPressureDoor
+  :36, InsulatedDoor :62) + GravitasDoor + peterhaneve's both mod doors (AirlockDoorConfig.cs:123);
+  (2) has the native `Door` component (Door.cs:7) — additionally covers BunkerDoor, POI doors
+  (non-buildable, harmless). Composite = rank-1 OR rank-2: 6/6 target coverage incl. the mod doors.
+- Hook: `Assets.AddBuildingDef(BuildingDef def)` — public static (Assets.cs:670), sole caller
+  `BuildingConfigManager.RegisterBuilding` (:114), fires exactly once per def, for every vanilla +
+  DLC + mod `IBuildingConfig` (LegacyModMain.cs:26-46 → GeneratedBuildings.cs:24), and AFTER the
+  full config chain (`DoPostConfigureComplete`, :104) — so the Door component / copyGroupTag are in
+  final state when the door test runs; future DLC/mod doors registered through the same path get
+  the metadata automatically. The runtime replacement machinery reads the def fields live
+  (`CanReplace` :278, `GetReplacementCandidate` :324, `IsReplacementLayerOccupied` :305 — no caches
+  of the replacement fields, §8), and every placed object references the same def instance
+  (BuildingLoader.cs:196+), so fields set at def creation are what BuildTool/Constructable consult.
+- Native caveat (out of scope, same as vanilla): natural cave backwalls are sim-data only (no
+  GameObject in Grid.ObjectLayers) — invisible to the replacement machinery.
+- Note: `FindMethod` in Mod.cs scans `BindingFlags.Instance` only — the static hook requires adding
+  `BindingFlags.Static` (safe: no C# signature can be both static and instance, so existing
+  instance lookups are unaffected).
+- WoodenDoor/InsulatedDoor set `Replaceable = false` — that's the CANDIDATE-side flag (they
+  themselves cannot be replaced); it does not stop them from replacing walls. Left untouched.
+
+**Fix design:**
+- A. New static helper `IsDoorDef(BuildingDef)` (composite door test, see above) in the Mod class.
+- B. New attribute-less patch class `Assets_AddBuildingDef_DoorReplacement__Patch`, postfix
+  `(BuildingDef __0)` (positional naming — this Harmony build parses `__N`; plain names are not
+  assigned): IsDoorDef gate → idempotent skip if `ReplacementLayer != NumLayers` (never override a
+  def's own metadata) → set the Stage-1 metadata (`ReplacementLayer = ReplacementTile`,
+  `ReplacementCandidateLayers = {FoundationTile, Backwall}`, `ReplacementTags = {FloorTiles,
+  Backwall, Ladders}`).
+- C. REMOVE `DoorConfig_CreateBuildingDef__Patch` (class + its two `[HarmonyPatch]` attributes): the
+  AddBuildingDef hook covers the Door def itself, same values — single source of truth. The file
+  then has ZERO attribute-bound patch classes (all four postfixes are programmatic).
+- D. Generalize the three `def.PrefabID != DoorConfig.ID` gates (helper, IsValidReplaceLocation tint
+  postfix, TryBuild postfix) to `!IsDoorDef(def)`.
+- E. `FindMethod` binding flags += `BindingFlags.Static`; OnLoad wiring block for
+  `FindMethod(typeof(Assets), "AddBuildingDef", typeof(BuildingDef))` + programmatic patch +
+  Debug.LogError fallback (same style).
+- F. Check script: attribute-count checks 2 → 0; programmatic `harmony.Patch(` count 3 → 4;
+  replace the three "'PrefabID != DoorConfig.ID' present 3 times" checks with the IsDoorDef-gate
+  checks (no `PrefabID != DoorConfig.ID` anywhere; `!IsDoorDef(` present ≥4 times); new: no
+  `DoorConfig_CreateBuildingDef`, AddBuildingDef wiring present, `copyGroupTag == GameTags.Door`
+  present, `BindingFlags.Static` present, idempotent guard present. All Stage-2/2.1 checks kept.
+
+- [ ] Green: implement A–E in Mod.cs + F in the check script; build green
+- [ ] Acceptance: independent audit
+
+**Criterion:** all five door defs (WoodenDoor only when DLC2 is active) get the replacement metadata
+exactly once at creation; vanilla defs unchanged; pneumatic-door behavior byte-identical (same
+metadata values, same gates — only the def test generalized); peterhaneve-style mod doors would be
+caught by the same hook/test; build green; no regression on the Stage-1/2/2.1 confirmed behaviors.
+**Commit:**
+
 ## Stage 3 — Sandbox: instant wall→door replacement (DEFERRED — user focuses on survival first)
 
 Note: the Stage-1 in-game check proved the replacement candidate gate (`Replaceable`/`CanReplace`)

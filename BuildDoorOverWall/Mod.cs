@@ -42,8 +42,11 @@ namespace OxygenNotIncluded.Mods
 
             // base.OnLoad runs Harmony's PatchAll, which only applies types carrying
             // HarmonyPatch attributes (0Harmony decompiled: PatchAllUncategorized
-            // filters by HasHarmonyAttribute, 0Harmony.decompiled.cs:6829). That is
-            // how the DoorConfig.CreateBuildingDef postfix below lands.
+            // filters by HasHarmonyAttribute, 0Harmony.decompiled.cs:6829). No
+            // attribute-bound classes exist anymore in this mod: all four postfixes
+            // (the two BuildingDef cosmetic ones, the BuildTool.TryBuild one and the
+            // Assets.AddBuildingDef metadata one) are attached PROGRAMMATICALLY
+            // below, and PatchAll therefore ignores every patch class in the file.
             //
             // The two BuildingDef postfixes below are attached PROGRAMMATICALLY
             // instead of via attributes, because the IsValidPlaceLocation target
@@ -96,6 +99,17 @@ namespace OxygenNotIncluded.Mods
             {
                 harmony.Patch(tryBuild, postfix: new HarmonyMethod(typeof(BuildTool_TryBuild_DoorReplacement__Patch), nameof(BuildTool_TryBuild_DoorReplacement__Patch.Postfix)));
             }
+            // 4. Stage 2.2: Assets.AddBuildingDef(BuildingDef) — public static; FindMethod now
+            // includes BindingFlags.Static so the declared-only scan finds it.
+            MethodInfo addBuildingDef = FindMethod(typeof(Assets), "AddBuildingDef", typeof(BuildingDef));
+            if (addBuildingDef == null)
+            {
+                UnityEngine.Debug.LogError("[BuildDoorOverWall] could not resolve Assets.AddBuildingDef(BuildingDef) — all-door replacement metadata postfix skipped (game build mismatch?)");
+            }
+            else
+            {
+                harmony.Patch(addBuildingDef, postfix: new HarmonyMethod(typeof(Assets_AddBuildingDef_DoorReplacement__Patch), nameof(Assets_AddBuildingDef_DoorReplacement__Patch.Postfix)));
+            }
         }
 
         /// <summary>
@@ -104,10 +118,13 @@ namespace OxygenNotIncluded.Mods
         /// T& (IsByRef), so both sides are reduced to the underlying type before
         /// comparing (ParameterType.GetElementType() on T& yields T). First full
         /// match wins, null if none — callers log a skip rather than crash.
+        /// BindingFlags.Static was added (Stage 2.2) so the declared-only scan also
+        /// finds the static Assets.AddBuildingDef target; instance lookups are
+        /// unaffected — no C# signature is both static and instance.
         /// </summary>
         private static MethodInfo FindMethod(Type type, string name, params Type[] underlyingTypes)
         {
-            foreach (MethodInfo m in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            foreach (MethodInfo m in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
             {
                 if (m.Name != name)
                 {
@@ -140,26 +157,41 @@ namespace OxygenNotIncluded.Mods
             return null;
         }
 
-        /// <summary>
-        /// Teaches the door BuildingDef the replacement metadata so the game's own
-        /// replacement flow (BuildTool / Constructable) can treat an existing
-        /// foundation tile or backwall as a replacement candidate for a door:
-        /// the door builds into ObjectLayer.ReplacementTile and replaces
-        /// FoundationTile / Backwall occupants tagged FloorTiles, Backwall or Ladders.
-        /// </summary>
-        [HarmonyPatch(typeof(DoorConfig))]
-        [HarmonyPatch(nameof(DoorConfig.CreateBuildingDef))]
-        public static class DoorConfig_CreateBuildingDef__Patch
+        // 0. Stage 2.2: teach EVERY door BuildingDef the replacement metadata (the old
+        // DoorConfig.CreateBuildingDef patch did this for the pneumatic door only). Hooks
+        // Assets.AddBuildingDef (Assets.cs:670, public static; sole caller
+        // BuildingConfigManager.RegisterBuilding, BuildingConfigManager.cs:114), which fires
+        // exactly once per def at registration — for every vanilla, DLC and mod IBuildingConfig
+        // (LegacyModMain.cs:26-46 -> GeneratedBuildings.cs:24) — and AFTER the complete config
+        // chain (DoPostConfigureComplete, BuildingConfigManager.cs:104), so the Door component
+        // and CopyBuildingSettings.copyGroupTag are in final state when IsDoorDef runs. Future
+        // DLC/mod doors registered through the same path get the metadata automatically.
+        // The runtime replacement machinery reads the def fields live (CanReplace,
+        // BuildingDef.cs:278; GetReplacementCandidate, :324; IsReplacementLayerOccupied, :305 —
+        // no caches of the replacement fields) and every placed object references this same def
+        // instance (BuildingLoader.cs:196+), so fields set here are what BuildTool/Constructable
+        // consult at build time. NO [HarmonyPatch] attributes: attached programmatically in OnLoad.
+        public static class Assets_AddBuildingDef_DoorReplacement__Patch
         {
-            public static void Postfix(ref BuildingDef __result)
+            public static void Postfix(BuildingDef __0)
             {
-                __result.ReplacementLayer = ObjectLayer.ReplacementTile;
-                __result.ReplacementCandidateLayers = new List<ObjectLayer>()
+                if (__0 == null || !IsDoorDef(__0))
+                {
+                    return;
+                }
+                // Idempotent: never override a def that already carries its own replacement
+                // metadata (no native door does today).
+                if (__0.ReplacementLayer != ObjectLayer.NumLayers)
+                {
+                    return;
+                }
+                __0.ReplacementLayer = ObjectLayer.ReplacementTile;
+                __0.ReplacementCandidateLayers = new List<ObjectLayer>()
                 {
                     ObjectLayer.FoundationTile,
                     ObjectLayer.Backwall
                 };
-                __result.ReplacementTags = new List<Tag>()
+                __0.ReplacementTags = new List<Tag>()
                 {
                     GameTags.FloorTiles,
                     GameTags.Backwall,
@@ -185,6 +217,32 @@ namespace OxygenNotIncluded.Mods
         /// (BuildTool.cs:350), never plain def.Build.
         /// </summary>
 
+        /// <summary>
+        /// Stage 2.2: generic door-def test. The game has no BuildCategories type and no shared
+        /// door tag — "Doors" menu membership is hardcoded static lists (BuildMenu.cs:151-159,
+        /// TUNING/BUILDINGS.cs:687-709). The two universal signals instead: every native door adds
+        /// the Door component (Door.cs:7, in ConfigureBuildingTemplate or DoPostConfigureComplete),
+        /// and every buildable door sets CopyBuildingSettings.copyGroupTag = GameTags.Door
+        /// (DoorConfig.cs:38, PressureDoorConfig.cs:41, WoodenDoorConfig.cs:60,
+        /// ManualPressureDoorConfig.cs:36, InsulatedDoorConfig.cs:62) — which mod doors follow too
+        /// (peterhaneve AirlockDoor: AirlockDoorConfig.cs:123). Composite = covers all native doors
+        /// (incl. BunkerDoor/GravitasDoor/POI doors) and future DLC/mod doors using either signal.
+        /// </summary>
+        private static bool IsDoorDef(BuildingDef def)
+        {
+            GameObject go = def.BuildingComplete;
+            if (go == null)
+            {
+                return false;
+            }
+            CopyBuildingSettings cbs = go.GetComponent<CopyBuildingSettings>();
+            if (cbs != null && cbs.copyGroupTag == GameTags.Door)
+            {
+                return true;
+            }
+            return go.GetComponent<Door>() != null;
+        }
+
         // Mirrors the survival drag gate in BuildTool.TryBuild (BuildTool.cs:350-385):
         //  - a replacement candidate exists at the anchor cell (BuildTool.cs:352;
         //    GetReplacementCandidate, BuildingDef.cs:324)
@@ -195,8 +253,10 @@ namespace OxygenNotIncluded.Mods
         //  - TryReplaceTile's own validity check passes (BuildingDef.cs:490)
         private static bool IsReplacementPlacementPossible(BuildingDef def, GameObject source_go, int cell, Orientation orientation)
         {
-            // door-def scope: vanilla defs (exterior walls, windows, thermal blocks, moulding tiles, templates) also set ReplacementLayer/CandidateLayers; the Stage-2 fix must not change their behavior
-            if (def.PrefabID != DoorConfig.ID)
+            // Door-def scope (Stage 2.2): vanilla defs (exterior walls, windows, thermal blocks,
+            // moulding tiles, building templates) also set ReplacementLayer/CandidateLayers — the
+            // fix must not change their behavior.
+            if (!IsDoorDef(def))
             {
                 return false;
             }
@@ -315,7 +375,7 @@ namespace OxygenNotIncluded.Mods
         {
             public static void Postfix(BuildingDef __instance, Vector3 pos, Orientation orientation, ObjectLayer replace_layer, ObjectLayer obj_layer, ref bool __result)
             {
-                if (__result || __instance.PrefabID != DoorConfig.ID)
+                if (__result || !IsDoorDef(__instance))
                 {
                     return;
                 }
@@ -349,7 +409,7 @@ namespace OxygenNotIncluded.Mods
             public static void Postfix(BuildTool __instance, int __0)
             {
                 BuildingDef def = __instance.def;
-                if (def == null || def.PrefabID != DoorConfig.ID)
+                if (def == null || !IsDoorDef(def))
                 {
                     return;
                 }

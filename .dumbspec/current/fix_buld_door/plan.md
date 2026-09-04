@@ -83,7 +83,8 @@ routing is untouched. The tint patch (`IsValidReplaceLocation`) and DoorConfig p
 - [x] Refactor: keep the fix minimal and commented (English, game file:line references)
 
 **Criterion:** independent acceptance trace (code-level) shows: (a) hover over foundation/Backwall with the door → the visualizer path no longer emits the «free space» warning (validity true when a replacement candidate is valid); (b) survival drag still takes the replacement path (IsReplacementTile plan) and door-over-rock is unchanged; build green.
-**Commit:**
+**Acceptance:** independent audit ACCEPT, 10/10 checks PASS (full trace `.tmp/acceptance_stage2.md`): target uniqueness, game-Harmony v2 postfix binding legality (no `__out_`/positional-`__N` misuse — the round-2 crash class), no recursion, hover/drag/rock/vanilla behavior, door-def scope, build green, packed dll with one UserMod2.
+**Commit:** 792c568
 
 ## Stage 3 — Sandbox: instant wall→door replacement (DEFERRED — user focuses on survival first)
 

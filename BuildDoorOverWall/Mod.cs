@@ -5,6 +5,9 @@ using HarmonyLib;
 using KMod;
 using UnityEngine;
 
+using PeterHan.PLib.Core;
+
+
 // Namespace keeps the `OxygenNotIncluded` walk-up so unqualified game types
 // (BuildingDef, DoorConfig, ObjectLayer, Tag, GameTags, Grid) resolve without extra usings.
 namespace OxygenNotIncluded.Mods
@@ -74,30 +77,48 @@ namespace OxygenNotIncluded.Mods
                 typeof(GameObject), typeof(Vector3), typeof(Orientation), typeof(string));
             if (validPlace == null)
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] BuildingDef.IsValidPlaceLocation(GameObject, Vector3, Orientation, out string) не найдена — hover-text/visualizer postfix пропущен");
+#endif
                 UnityEngine.Debug.LogError("[BuildDoorOverWall] could not resolve BuildingDef.IsValidPlaceLocation(GameObject, Vector3, Orientation, out string) — hover-text/visualizer postfix skipped (game build mismatch?)");
             }
             else
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] Патчу hover-text/visualizer postfix на {0}".F(validPlace));
+#endif
                 harmony.Patch(validPlace, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation_DoorReplacement__Patch), nameof(BuildingDef_IsValidPlaceLocation_DoorReplacement__Patch.Postfix)));
             }
             MethodInfo validReplace = FindMethod(typeof(BuildingDef), "IsValidReplaceLocation",
                 typeof(Vector3), typeof(Orientation), typeof(ObjectLayer), typeof(ObjectLayer));
             if (validReplace == null)
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] BuildingDef.IsValidReplaceLocation(Vector3, Orientation, ObjectLayer, ObjectLayer) не найдена — preview-tint postfix пропущен");
+#endif
                 UnityEngine.Debug.LogError("[BuildDoorOverWall] could not resolve BuildingDef.IsValidReplaceLocation(Vector3, Orientation, ObjectLayer, ObjectLayer) — preview-tint postfix skipped (game build mismatch?)");
             }
             else
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] Патчу preview-tint postfix на {0}".F(validReplace));
+#endif
                 harmony.Patch(validReplace, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidReplaceLocation_DoorReplacement__Patch), nameof(BuildingDef_IsValidReplaceLocation_DoorReplacement__Patch.Postfix)));
             }
             // 3. Stage 2.1: BuildTool.TryBuild(int) — private method, resolved like the others.
             MethodInfo tryBuild = FindMethod(typeof(BuildTool), "TryBuild", typeof(int));
             if (tryBuild == null)
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] BuildTool.TryBuild(int) не найдена — upper-cell replacement fallback postfix пропущен");
+#endif
                 UnityEngine.Debug.LogError("[BuildDoorOverWall] could not resolve BuildTool.TryBuild(int) — upper-cell replacement fallback postfix skipped (game build mismatch?)");
             }
             else
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] Патчу upper-cell replacement fallback postfix на {0}".F(tryBuild));
+#endif
                 harmony.Patch(tryBuild, postfix: new HarmonyMethod(typeof(BuildTool_TryBuild_DoorReplacement__Patch), nameof(BuildTool_TryBuild_DoorReplacement__Patch.Postfix)));
             }
             // 4. Stage 2.2: Assets.AddBuildingDef(BuildingDef) — public static; FindMethod now
@@ -105,10 +126,16 @@ namespace OxygenNotIncluded.Mods
             MethodInfo addBuildingDef = FindMethod(typeof(Assets), "AddBuildingDef", typeof(BuildingDef));
             if (addBuildingDef == null)
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] Assets.AddBuildingDef(BuildingDef) не найдена — replacement metadata postfix пропущен");
+#endif
                 UnityEngine.Debug.LogError("[BuildDoorOverWall] could not resolve Assets.AddBuildingDef(BuildingDef) — all-door replacement metadata postfix skipped (game build mismatch?)");
             }
             else
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] Патчу replacement metadata postfix на {0}".F(addBuildingDef));
+#endif
                 harmony.Patch(addBuildingDef, postfix: new HarmonyMethod(typeof(Assets_AddBuildingDef_DoorReplacement__Patch), nameof(Assets_AddBuildingDef_DoorReplacement__Patch.Postfix)));
             }
             // 5. Stage 2.2.1: Constructable.MarkArea() — private no-param method, resolved by
@@ -118,10 +145,16 @@ namespace OxygenNotIncluded.Mods
             MethodInfo markArea = FindMethod(typeof(Constructable), "MarkArea");
             if (markArea == null)
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] Constructable.MarkArea() не найдена — door tile-layer unwind пропущен");
+#endif
                 UnityEngine.Debug.LogError("[BuildDoorOverWall] could not resolve Constructable.MarkArea() — door tile-layer unwind skipped (game build mismatch?)");
             }
             else
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] Патчу door tile-layer unwind prefix+postfix на {0}".F(markArea));
+#endif
                 harmony.Patch(markArea,
                     prefix: new HarmonyMethod(typeof(Constructable_MarkArea_DoorTileUnwind__Patch), nameof(Constructable_MarkArea_DoorTileUnwind__Patch.Prefix)),
                     postfix: new HarmonyMethod(typeof(Constructable_MarkArea_DoorTileUnwind__Patch), nameof(Constructable_MarkArea_DoorTileUnwind__Patch.Postfix)));
@@ -144,11 +177,17 @@ namespace OxygenNotIncluded.Mods
             {
                 if (m.Name != name)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] FindMethod: {0}.{1} — имя не совпадает с {2}".F(type.Name, m.Name, name));
+#endif
                     continue;
                 }
                 ParameterInfo[] ps = m.GetParameters();
                 if (ps.Length != underlyingTypes.Length)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] FindMethod: {0}.{1} — аргументов {2}, ожидалось {3}".F(type.Name, name, ps.Length, underlyingTypes.Length));
+#endif
                     continue;
                 }
                 bool match = true;
@@ -157,19 +196,31 @@ namespace OxygenNotIncluded.Mods
                     Type pt = ps[i].ParameterType;
                     if (pt.IsByRef)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] FindMethod: {0}.{1} — параметр {2} byref ({3}), базовый тип {4}".F(type.Name, name, i, ps[i].ParameterType.Name, pt.GetElementType().Name));
+#endif
                         pt = pt.GetElementType();
                     }
                     if (pt != underlyingTypes[i])
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] FindMethod: {0}.{1} — параметр {2}: {3} != {4}".F(type.Name, name, i, pt, underlyingTypes[i]));
+#endif
                         match = false;
                         break;
                     }
                 }
                 if (match)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] FindMethod: найдена {0}".F(m));
+#endif
                     return m;
                 }
             }
+#if DEBUG
+            PUtil.LogDebug("[BuildDoorOverWall] FindMethod: {0}.{1} не найдена — патч будет пропущен".F(type.Name, name));
+#endif
             return null;
         }
 
@@ -193,12 +244,18 @@ namespace OxygenNotIncluded.Mods
             {
                 if (__0 == null || !IsDoorDef(__0))
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] AddBuildingDef postfix: пропуск, def={0} (null или не дверь)".F(__0 == null ? "(null)" : __0.PrefabID));
+#endif
                     return;
                 }
                 // Idempotent: never override a def that already carries its own replacement
                 // metadata (no native door does today).
                 if (__0.ReplacementLayer != ObjectLayer.NumLayers)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] AddBuildingDef postfix: def={0} уже имеет ReplacementLayer={1} — пропуск".F(__0.PrefabID, __0.ReplacementLayer));
+#endif
                     return;
                 }
                 __0.ReplacementLayer = ObjectLayer.ReplacementTile;
@@ -213,6 +270,9 @@ namespace OxygenNotIncluded.Mods
                     GameTags.Backwall,
                     GameTags.Ladders
                 };
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] AddBuildingDef postfix: def={0} — проставлены метаданные замены (ReplacementLayer={1}, CandidateLayers={2}, Tags={3})".F(__0.PrefabID, __0.ReplacementLayer, __0.ReplacementCandidateLayers.Count, __0.ReplacementTags.Count));
+#endif
             }
         }
 
@@ -249,14 +309,24 @@ namespace OxygenNotIncluded.Mods
             GameObject go = def.BuildingComplete;
             if (go == null)
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] IsDoorDef: def={0} — BuildingComplete == null, false".F(def.PrefabID));
+#endif
                 return false;
             }
             CopyBuildingSettings cbs = go.GetComponent<CopyBuildingSettings>();
             if (cbs != null && cbs.copyGroupTag == GameTags.Door)
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] IsDoorDef: def={0} — copyGroupTag == Door, true".F(def.PrefabID));
+#endif
                 return true;
             }
-            return go.GetComponent<Door>() != null;
+            bool hasDoorComponent = go.GetComponent<Door>() != null;
+#if DEBUG
+            PUtil.LogDebug("[BuildDoorOverWall] IsDoorDef: def={0} — cbs={1}, copyGroupTag={2}, Door-компонент={3}".F(def.PrefabID, cbs == null ? "(null)" : "есть", cbs == null ? "(null)" : cbs.copyGroupTag.ToString(), hasDoorComponent));
+#endif
+            return hasDoorComponent;
         }
 
         // Mirrors the survival drag gate in BuildTool.TryBuild (BuildTool.cs:350-385):
@@ -274,10 +344,16 @@ namespace OxygenNotIncluded.Mods
             // fix must not change their behavior.
             if (!IsDoorDef(def))
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: def={0} cell={1} — не дверь, false".F(def.PrefabID, cell));
+#endif
                 return false;
             }
             if (def.ReplacementLayer == ObjectLayer.NumLayers || def.ReplacementCandidateLayers == null)
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: def={0} cell={1} — ReplacementLayer={2}, CandidateLayers={3} — false".F(def.PrefabID, cell, def.ReplacementLayer, def.ReplacementCandidateLayers == null ? "(null)" : def.ReplacementCandidateLayers.Count.ToString()));
+#endif
                 return false;
             }
             // Area-aware replacement-candidate search: the door is 1x2 and the candidate (wall) may
@@ -291,26 +367,44 @@ namespace OxygenNotIncluded.Mods
             {
                 if (candidate != null)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: клетка {0} — кандидат уже найден ({1})".F(c, candidate.name));
+#endif
                     return;
                 }
                 GameObject local = def.GetReplacementCandidate(c);
                 if (local == null)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: клетка {0} — кандидата нет".F(c));
+#endif
                     return;
                 }
                 BuildingComplete complete = local.GetComponent<BuildingComplete>();
                 if (complete == null || !complete.Def.Replaceable)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: клетка {0} — кандидат {1}, Replaceable={2}".F(c, local.name, complete == null ? "(null)" : complete.Def.Replaceable.ToString()));
+#endif
                     return;
                 }
                 if (!def.CanReplace(local))
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: клетка {0} — CanReplace({1}) = false".F(c, local.name));
+#endif
                     return;
                 }
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: клетка {0} — найден кандидат {1}".F(c, local.name));
+#endif
                 candidate = local;
             });
             if (candidate == null)
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: def={0} cell={1} — кандидат не найден в области двери, false".F(def.PrefabID, cell));
+#endif
                 return false;
             }
             bool occupied = false;
@@ -318,15 +412,25 @@ namespace OxygenNotIncluded.Mods
             {
                 if (def.IsReplacementLayerOccupied(c))
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: клетка {0} — replacement-layer занят".F(c));
+#endif
                     occupied = true;
                 }
             });
             if (occupied)
             {
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: def={0} cell={1} — replacement-layer занят в области двери, false".F(def.PrefabID, cell));
+#endif
                 return false;
             }
             string fail_reason;
-            return def.IsValidPlaceLocation(source_go, cell, orientation, replace_tile: true, out fail_reason, restrictToActiveWorld: false);
+            bool result = def.IsValidPlaceLocation(source_go, cell, orientation, replace_tile: true, out fail_reason, restrictToActiveWorld: false);
+#if DEBUG
+            PUtil.LogDebug("[BuildDoorOverWall] IsReplacementPlacementPossible: def={0} cell={1} — IsValidPlaceLocation(replace_tile) = {2}{3}".F(def.PrefabID, cell, result, result ? "" : " (" + fail_reason + ")"));
+#endif
+            return result;
         }
 
         // 1. Suppress the false warning text (and stop the visualizer from painting
@@ -366,11 +470,23 @@ namespace OxygenNotIncluded.Mods
             {
                 if (__result)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsValidPlaceLocation postfix: def={0} pos={1} — уже валидно, без изменений".F(__instance.PrefabID, __1));
+#endif
                     return;
                 }
                 if (IsReplacementPlacementPossible(__instance, __0, Grid.PosToCell(__1), __2))
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsValidPlaceLocation postfix: def={0} pos={1} — замена возможна, __result: {2} -> true".F(__instance.PrefabID, __1, __result));
+#endif
                     __result = true;
+                }
+                else
+                {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsValidPlaceLocation postfix: def={0} pos={1} — замена невозможна, остаётся {2}".F(__instance.PrefabID, __1, __result));
+#endif
                 }
             }
         }
@@ -393,11 +509,23 @@ namespace OxygenNotIncluded.Mods
             {
                 if (__result || !IsDoorDef(__instance))
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsValidReplaceLocation postfix: def={0} pos={1} — пропуск (result={2}, IsDoorDef={3})".F(__instance.PrefabID, pos, __result, IsDoorDef(__instance)));
+#endif
                     return;
                 }
                 if (IsReplacementPlacementPossible(__instance, null, Grid.PosToCell(pos), orientation))
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsValidReplaceLocation postfix: def={0} pos={1} — замена возможна, __result: {2} -> true".F(__instance.PrefabID, pos, __result));
+#endif
                     __result = true;
+                }
+                else
+                {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] IsValidReplaceLocation postfix: def={0} pos={1} — замена невозможна, остаётся {2}".F(__instance.PrefabID, pos, __result));
+#endif
                 }
             }
         }
@@ -427,10 +555,16 @@ namespace OxygenNotIncluded.Mods
                 BuildingDef def = __instance.def;
                 if (def == null || !IsDoorDef(def))
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: пропуск, def={0} (null или не дверь)".F(def == null ? "(null)" : def.PrefabID));
+#endif
                     return;
                 }
                 if (def.ReplacementLayer == ObjectLayer.NumLayers)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — ReplacementLayer={2}, не замена".F(def.PrefabID, __0, def.ReplacementLayer));
+#endif
                     return;
                 }
                 // Mirror TryBuild's early-return guard (BuildTool.cs:309): if the native method
@@ -438,27 +572,42 @@ namespace OxygenNotIncluded.Mods
                 GameObject visualizer = __instance.visualizer;
                 if (visualizer == null)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — visualizer == null".F(def.PrefabID, __0));
+#endif
                     return;
                 }
                 if (Grid.PosToCell(visualizer) != __0 && (def.BuildingComplete.GetComponent<LogicPorts>() != null || def.BuildingComplete.GetComponent<LogicGateBase>() != null))
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} — visualizer в клетке {1}, build-клетка {2} (logic-здание) — пропуск".F(def.PrefabID, Grid.PosToCell(visualizer), __0));
+#endif
                     return;
                 }
                 // A replacement plan already at the anchor (created natively or by a previous drag
                 // event) means the placement already happened.
                 if (Grid.Objects[__0, (int)def.ReplacementLayer] != null)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — replacement-plan уже есть ({2})".F(def.PrefabID, __0, Grid.Objects[__0, (int)def.ReplacementLayer].name));
+#endif
                     return;
                 }
                 // Instant-build mode: the native fallback takes InstantBuildReplace (Stage 3,
                 // deferred) — do not interfere.
                 if (DebugHandler.InstantBuildMode || (Game.Instance.SandboxModeActive && SandboxToolParameterMenu.instance.settings.InstantBuild))
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — instant-build (DebugHandler={2}, Sandbox={3}) — без вмешательства".F(def.PrefabID, __0, DebugHandler.InstantBuildMode, Game.Instance.SandboxModeActive && SandboxToolParameterMenu.instance.settings.InstantBuild));
+#endif
                     return;
                 }
                 IList<Tag> selected = __instance.selectedElements;
                 if (selected == null || selected.Count == 0)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — selectedElements пуст (count={2})".F(def.PrefabID, __0, selected == null ? -1 : selected.Count));
+#endif
                     return;
                 }
                 // Area-aware candidate with the native gate (BuildTool.cs:352-364).
@@ -467,26 +616,44 @@ namespace OxygenNotIncluded.Mods
                 {
                     if (candidate != null)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: клетка {0} — кандидат уже найден ({1})".F(c, candidate.name));
+#endif
                         return;
                     }
                     GameObject local = def.GetReplacementCandidate(c);
                     if (local == null)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: клетка {0} — кандидата нет".F(c));
+#endif
                         return;
                     }
                     BuildingComplete complete = local.GetComponent<BuildingComplete>();
                     if (complete == null || !complete.Def.Replaceable)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: клетка {0} — кандидат {1}, Replaceable={2}".F(c, local.name, complete == null ? "(null)" : complete.Def.Replaceable.ToString()));
+#endif
                         return;
                     }
                     if (!def.CanReplace(local))
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: клетка {0} — CanReplace({1}) = false".F(c, local.name));
+#endif
                         return;
                     }
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: клетка {0} — найден кандидат {1}".F(c, local.name));
+#endif
                     candidate = local;
                 });
                 if (candidate == null)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — кандидат не найден в области двери".F(def.PrefabID, __0));
+#endif
                     return;
                 }
                 // The replacement layer must be unoccupied in every door cell (BuildTool.cs:354-360).
@@ -495,11 +662,17 @@ namespace OxygenNotIncluded.Mods
                 {
                     if (def.IsReplacementLayerOccupied(c))
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: клетка {0} — replacement-layer занят".F(c));
+#endif
                         occupied = true;
                     }
                 });
                 if (occupied)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — replacement-layer занят в области двери".F(def.PrefabID, __0));
+#endif
                     return;
                 }
                 // Native element gate (BuildTool.cs:366-371): proceed only when the candidate def
@@ -508,16 +681,25 @@ namespace OxygenNotIncluded.Mods
                 Tag tag = candidate.GetComponent<PrimaryElement>().Element.tag;
                 if (tag.GetHash() == 1542131326)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: элемент {0} — snow-хэш {1}, заменяю на SimHashes.Snow".F(tag, tag.GetHash()));
+#endif
                     tag = SimHashes.Snow.CreateTag();
                 }
                 if (candidate.GetComponent<BuildingComplete>().Def == def && selected[0] == tag)
                 {
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} — кандидат {1} того же дефа и элемент {2} уже выбран — пропуск".F(def.PrefabID, candidate.name, tag));
+#endif
                     return;
                 }
                 // Create the plan exactly like the native fallback tail (BuildTool.cs:377-379).
                 Vector3 pos = Grid.CellToPosCBC(__0, Grid.SceneLayer.Building);
                 GameObject plan = def.TryReplaceTile(visualizer, pos, __instance.buildingOrientation, selected, __instance.facadeID);
                 Grid.Objects[__0, (int)def.ReplacementLayer] = plan;
+#if DEBUG
+                PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — создан replacement-plan {2} (кандидат {3}, pos={4})".F(def.PrefabID, __0, plan == null ? "(null)" : plan.name, candidate.name, pos));
+#endif
                 // The native PostProcessBuild already ran with a null build result, so mirror its
                 // master-priority assignment (BuildTool.cs:440-448); the placement sound is
                 // intentionally skipped.
@@ -526,16 +708,37 @@ namespace OxygenNotIncluded.Mods
                     Prioritizable prioritizable = plan.GetComponent<Prioritizable>();
                     if (prioritizable != null)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: plan {0} — приоритет: BuildMenu={1}, PlanScreen={2}".F(plan.name, BuildMenu.Instance != null, PlanScreen.Instance != null));
+#endif
                         if (BuildMenu.Instance != null)
                         {
+#if DEBUG
+                            PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: SetMasterPriority от BuildMenu = {0}".F(BuildMenu.Instance.GetBuildingPriority()));
+#endif
                             prioritizable.SetMasterPriority(BuildMenu.Instance.GetBuildingPriority());
                         }
                         if (PlanScreen.Instance != null)
                         {
+#if DEBUG
+                            PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: SetMasterPriority от PlanScreen = {0}".F(PlanScreen.Instance.GetBuildingPriority()));
+#endif
                             prioritizable.SetMasterPriority(PlanScreen.Instance.GetBuildingPriority());
                         }
                     }
+                    else
+                    {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: план {0} без Prioritizable".F(plan.name));
+#endif
+                    }
                 }
+#if DEBUG
+                else
+                {
+                    PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — TryReplaceTile вернул null".F(def.PrefabID, __0));
+                }
+#endif
             }
         }
 
@@ -606,24 +809,39 @@ namespace OxygenNotIncluded.Mods
                 {
                     if (__instance == null || !__instance.IsReplacementTile)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea prefix: пропуск ({0}, IsReplacementTile={1})".F(__instance == null ? "(null)" : __instance.gameObject.name, __instance == null ? "(null)" : __instance.IsReplacementTile.ToString()));
+#endif
                         return;
                     }
                     Building building = __instance.GetComponent<Building>();
                     if (building == null)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea prefix: {0} — нет Building-компонента".F(__instance.gameObject.name));
+#endif
                         return;
                     }
                     BuildingDef def = building.Def;
                     if (def == null || !IsDoorDef(def) || !def.IsTilePiece)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea prefix: {0} — пропуск (def={1}, IsDoorDef={2}, IsTilePiece={3})".F(__instance.gameObject.name, def == null ? "(null)" : def.PrefabID, def == null ? false : IsDoorDef(def), def == null ? false : def.IsTilePiece));
+#endif
                         return;
                     }
                     s_preMarkTileOccupied = new HashSet<int>();
                     int anchor = Grid.PosToCell(__instance.transform.GetPosition());
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] MarkArea prefix: def={0} — фиксирую занятость tile-layer до MarkArea (anchor={1})".F(def.PrefabID, anchor));
+#endif
                     def.RunOnArea(anchor, building.Orientation, (c) =>
                     {
                         if (Grid.Objects[c, (int)def.TileLayer] != null)
                         {
+#if DEBUG
+                            PUtil.LogDebug("[BuildDoorOverWall] MarkArea prefix: def={0} — клетка {1} занята в tile-layer ({2})".F(def.PrefabID, c, Grid.Objects[c, (int)def.TileLayer].name));
+#endif
                             s_preMarkTileOccupied.Add(c);
                         }
                     });
@@ -645,23 +863,38 @@ namespace OxygenNotIncluded.Mods
                     s_preMarkTileOccupied = null;
                     if (preMark == null)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea postfix: {0} — preMark == null (не qualifying-план или prefix упал), пропуск".F(__instance == null ? "(null)" : __instance.gameObject.name));
+#endif
                         return; // not a qualifying door replacement plan (or prefix failed)
                     }
                     Building building = __instance.GetComponent<Building>();
                     if (building == null)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea postfix: {0} — нет Building-компонента".F(__instance.gameObject.name));
+#endif
                         return;
                     }
                     BuildingDef def = building.Def;
                     if (def == null)
                     {
+#if DEBUG
+                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea postfix: {0} — def == null".F(__instance.gameObject.name));
+#endif
                         return;
                     }
                     int anchor = Grid.PosToCell(__instance.transform.GetPosition());
+#if DEBUG
+                    PUtil.LogDebug("[BuildDoorOverWall] MarkArea postfix: def={0} — отматываю tile-layer (anchor={1}, зафиксированных клеток: {2})".F(def.PrefabID, anchor, preMark.Count));
+#endif
                     def.RunOnArea(anchor, building.Orientation, (c) =>
                     {
                         if (Grid.Objects[c, (int)def.TileLayer] == __instance.gameObject && !preMark.Contains(c))
                         {
+#if DEBUG
+                            PUtil.LogDebug("[BuildDoorOverWall] MarkArea postfix: def={0} — клетка {1} занята планом, но до MarkArea была пуста — очищаю tile-layer".F(def.PrefabID, c));
+#endif
                             Grid.Objects[c, (int)def.TileLayer] = null;
                             TileVisualizer.RefreshCell(c, def.TileLayer, def.ReplacementLayer);
                         }
@@ -671,6 +904,9 @@ namespace OxygenNotIncluded.Mods
                     // since the tile layer is now fully unwound for this plan.
                     if (!preMark.Contains(anchor))
                     {
+#if DEBUG
+                        PUtil.LogDebug("Grid.IsTileUnderConstruction[{0}] = false".F(anchor));
+#endif
                         Grid.IsTileUnderConstruction[anchor] = false;
                     }
                 }

@@ -215,6 +215,118 @@ metadata values, same gates — only the def test generalized); peterhaneve-styl
 caught by the same hook/test; build green; no regression on the Stage-1/2/2.1 confirmed behaviors.
 **Commit:** `fix(fix_buld_door): stage 2.2 — generalize door replacement to all door defs (Assets.AddBuildingDef hook + IsDoorDef gate)`
 
+## Stage 2.2.1 — Fix: wall rendering breaks when a non-pneumatic door is placed lower-in-air / upper-on-wall; persists after cancel
+
+**User report (verbatim, RU):** «Проверил, все работает как я хотел, но всплыл баг: если ставить дверь
+(любую кроме обычной пневматической) нижней частью в воздухе, а верхней в стене, то ломается отрисовка
+стены (начинает разбиваться на отдельные блоки, т.е. появляются границы у стены, отмена установки не
+исправляет отрисовку.). если целиком ставить в стене - то все нормально, если только нижней частью - то
+нормально.»
+
+### Red trace (decompile-verified, `.tmp/game_decomp/`)
+
+The broken doors are exactly the tile-piece doors: PressureDoor / WoodenDoor / ManualPressureDoor /
+InsulatedDoor all have `IsFoundation = true` → `TileLayer = FoundationTile` → `def.IsTilePiece == true`
+(`.tmp/research_stage22.md`). The pneumatic `Door` is `IsFoundation = false` → `TileLayer = NumLayers`
+→ not a tile piece. This matches the user's «кроме обычной пневматической».
+
+Chain:
+1. Our TryBuild postfix creates the replacement plan (`Constructable`, `IsReplacementTile = true`).
+2. `Constructable.OnSpawn` (Constructable.cs:343-346) calls the private no-param `MarkArea()` (:441-461).
+3. `MarkArea` writes the plan into `Grid.Objects[cell, ReplacementTile]` at EVERY placement cell
+   (`def.MarkArea`, BuildingDef.cs:829-843) — intended; the game unwinds it on cancel
+   (`Constructable.UnmarkArea`, :463-477, replacement layer only).
+4. Then the tile-piece branch: `if (!def.IsTilePiece) return;` (:448) — passes for the 4 tile-piece
+   doors, returns for the pneumatic.
+5. Branch guard `Grid.Objects[anchor, TileLayer] == null` (:452) is true when the anchor cell is air
+   (case B) or a backwall cell (case A / fully-in-wall).
+6. Inside: `def.MarkArea(anchor, orientation, def.TileLayer, plan)` (:454) writes the plan into
+   `Grid.ObjectLayers[FoundationTile]` at EVERY door cell unconditionally (BuildingDef.cs:829-843) —
+   including the backwall cell, which never holds a foundation tile (backwalls live in the separate
+   `BackwallManager.backwallElement` array; `Grid.Element` is the main element, Grid.cs:732) — breaking
+   the native invariant. Plus `TileVisualizer.RefreshCell` at every cell and
+   `Grid.IsTileUnderConstruction[anchor] = true` (:460, anchor only).
+7. The plan's own `SimCellOccupier.OnSpawn` (:65-98) additionally sets `Grid.RenderedByWorld[cell] = false`
+   at every placement cell, including the wall cell.
+8. World-mesh state is per-cell: `World.cs:99` recomputes `RenderedByWorld` only for cells in that
+   tick's `solid_substance_change_info`, via
+   `substance.renderedByWorld && (Grid.Objects[cell, 9] == null || Grid.IsTileUnderConstruction[cell])`.
+   At the wall cell (non-anchor): layer-9 entry = plan (non-null) + `IsTileUnderConstruction = false`
+   → the world mesh stops drawing the cell as part of the connected wall surface → the wall splits into
+   per-cell blocks. The backwall quads (`GroundRenderer.cs` biomeChecks, :256-272) come from the
+   BackwallManager and are NOT gated by RenderedByWorld, so the seams stay visible.
+9. On cancel the state is never unwound: `Constructable.UnmarkArea` never clears the FoundationTile entry
+   (asymmetric with MarkArea), and `SimCellOccupier.DestroySelf` (:143-181) restores the main element +
+   clears cell properties but never restores `RenderedByWorld` and never refreshes the cell → the
+   corruption persists.
+10. Case A (anchor ON the wall) survives today because `IsTileUnderConstruction[anchor] = true`
+    (anchor = the wall cell) keeps the World.cs:99 formula consistent.
+
+### Fix design
+
+New nested patch class `Constructable_MarkArea_DoorTileUnwind__Patch` (NO `[HarmonyPatch]` attributes —
+the file keeps ZERO attribute-bound classes), a prefix+postfix pair on the private no-param
+`Constructable.MarkArea()`. Restores the native anchor-gated invariant: the plan occupies the tile layer
+only at cells that already held a foundation tile (real replacement candidates), never at
+backwall/air cells.
+
+- A. OnLoad wiring (5th programmatic patch):
+  `MethodInfo markArea = FindMethod(typeof(Constructable), "MarkArea");` → null → Debug.LogError
+  fallback (same style as the other four); else `harmony.Patch(markArea, prefix: ..., postfix: ...)`
+  with `nameof(Constructable_MarkArea_DoorTileUnwind__Patch.Prefix)` / `nameof(...Postfix)`.
+- B. `Prefix(Constructable __0)`: first reset static `s_preMarkTileOccupied = null`. Gates:
+  `__0 != null && __0.IsReplacementTile` (public field, Constructable.cs:64) &&
+  `building = __0.GetComponent<Building>() != null` && `def = building.Def != null` &&
+  `IsDoorDef(def)` && `def.IsTilePiece`. Then capture pre-MarkArea tile-layer occupancy:
+  `anchor = Grid.PosToCell(__0.transform.GetPosition())`;
+  `def.RunOnArea(anchor, building.Orientation, c => { if (Grid.Objects[c, (int)def.TileLayer] != null) s_preMarkTileOccupied.Add(c); });`
+  try/catch + Debug.LogError; on error reset the static to null.
+- C. `Postfix(Constructable __0)`: read + reset the static (null → not applicable, return).
+  `anchor = Grid.PosToCell(__0.transform.GetPosition())`; per door cell via
+  `def.RunOnArea(anchor, building.Orientation, c => ...)`: if
+  `Grid.Objects[c, (int)def.TileLayer] == __0.gameObject` AND the cell is NOT in preMark →
+  `Grid.Objects[c, (int)def.TileLayer] = null;` +
+  `TileVisualizer.RefreshCell(c, def.TileLayer, def.ReplacementLayer);` (RefreshCell already refreshes
+  the 4 neighbors). If the anchor is NOT in preMark (the branch ran and wrote at the anchor) →
+  `Grid.IsTileUnderConstruction[anchor] = false;`. try/catch + Debug.LogError.
+- D. Cancel needs no extra patches: the replacement-layer entry is unwound by the game's `UnmarkArea`;
+  the tile layer was never written at the wall cell; `RenderedByWorld` self-heals via the World.cs:99
+  formula on the next solid-change sim tick (the plan's `SetCellProperties` at placement and
+  `DestroySelf` at cancel both trigger sim ticks at the wall cell).
+- E. Mixed case preserved: door anchored in air with its upper cell on a REAL foundation tile (e.g. a
+  floor) — preMark contains that cell → its tile-layer entry is left in place (native replacement flow
+  untouched).
+- F. Check script: `harmony.Patch(` count 4 → 5; `[HarmonyPatch]` still 0; new checks: class
+  `Constructable_MarkArea_DoorTileUnwind__Patch` present, `FindMethod(typeof(Constructable), "MarkArea")`
+  wiring present, `IsReplacementTile` gate present, `IsTileUnderConstruction` present,
+  `s_preMarkTileOccupied` present, MarkArea LogError fallback present. All Stage-2/2.1/2.2 checks kept.
+
+### Crash #1 (first live test of Stage 2.2.1) — receiver parameter naming
+
+First build named the receiver `__0` (`Prefix(Constructable __0)` / `Postfix(Constructable __0)`).
+In this 0Harmony build `__N` resolves as a POSITIONAL index into the original method's
+DECLARED parameters (0Harmony.decompiled.cs:4453 throws "No parameter found at index N");
+`MarkArea()` has ZERO declared parameters → `harmony.Patch` threw at patch-creation time in
+`OnLoad` (Player.log 2026-09-04: `System.Exception: No parameter found at index 0` at
+`AddPrefixes`, `Mod.OnLoad`) → the mod load failed → the game crashed at startup.
+Fix: receiver renamed to the special name `__instance` (INSTANCE_PARAM,
+0Harmony.decompiled.cs:4895; `InjectionType.Instance` → `Ldarg_0`, valid for prefixes and
+postfixes alike) — the same convention as the TryBuild/hover patches in this file.
+Regression checks added to the check script: the MarkArea patch class must use `__instance`
+(≥4 uses) and contain no `__0`.
+
+- [x] Red: trace above (root cause + all member accessibilities verified)
+- [ ] Green: implement A–F in Mod.cs + the check-script updates; build green; check script `== RESULT: PASS`
+- [ ] Independent acceptance ralph: audit Stage-2.2 invariants + the 2.2.1 fix (report → `.tmp/acceptance_stage221.md`)
+- [ ] Live: user in-game test matrix (RU handoff)
+
+**Criterion:** door replacement plans never write the plan object into
+`Grid.ObjectLayers[FoundationTile]` at cells holding no foundation tile (backwall/air) — code-level
+verified; cancel leaves no stale per-cell state (tile layer / RenderedByWorld / IsTileUnderConstruction);
+in-game: wall renders intact for all 5 doors × {upper-on-wall, lower-on-wall, both-on-wall,
+cancel-after-placement} matrix, no persistent breakage; no regression on Stage 1/2/2.1 behaviors.
+**Commit:**
+
 ## Stage 3 — Sandbox: instant wall→door replacement (DEFERRED — user focuses on survival first)
 
 Note: the Stage-1 in-game check proved the replacement candidate gate (`Replaceable`/`CanReplace`)

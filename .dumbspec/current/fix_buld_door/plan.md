@@ -61,11 +61,26 @@ cannot express this. **Fix:** strip the `[HarmonyPatch]` attributes from both `B
 byref-normalized manual matcher (`IsByRef → GetElementType`); loud `Debug.LogError` if a target is not
 found. The `DoorConfig` attribute patch (parameterless target) stays as-is (worked in-game).
 
-- [ ] Red: trace the hover/preview path — find the actual method (look for `UpdateVis`/`UpdateVisualizer` in BuildTool.cs; where `fail_reason` from non-replacement `BuildingDef.IsValidPlaceLocation` feeds the tooltip; where the preview color is set, cf. `IsValidReplaceLocation` at BuildTool.cs:178); identify exactly where the «free construction space» warning is emitted for a door hovering over a FoundationTile / Backwall occupant. Write to `./.tmp/stage2_hover_trace.md`: (a) the exact call chain, (b) why the plain validity check fails there, (c) that replacement validity (`replace_tile=true`) succeeds for the same cell (that is the failing check — the warning is false)
-- [ ] Red (continued): trace the survival drag path end-to-end with the current metadata-only Mod.cs: `BuildTool.TryBuild` → replacement fallback → `TryReplaceTile` (IsReplacementTile plan) → `Constructable.OnCompleteWork`/`FinishConstruction` candidate destruction (both door cells) + `Def.Build`; plus door-over-rock regression (native Diggable path). Confirm no code change is needed here (works in-game per user); record gaps only if found
-- [ ] Green: implement the minimal fix in `BuildDoorOverWall/Mod.cs` (door-def scoped) so the hover preview shows a valid state — no «free space» warning, correct preview color — when a valid replacement candidate exists in the door's cell; the drag path must still reach the replacement fallback (survival `TryReplaceTile` / sandbox `InstantBuildReplace`) and must NOT be diverted to plain `TryPlace`/`def.Build`
-- [ ] Green: `./.tmp/fix_buld_door_checks.sh` passes (extend it with new assertions if needed, never weaken existing ones); full build green
-- [ ] Refactor: keep the fix minimal and commented (English, game file:line references)
+**Rework record 2 (2026-09-03, second in-game crash):** the programmatic patching worked (target
+resolved) but the postfix signature used `ref string __out_fail_reason`. The game's 0Harmony does NOT
+implement the `__out_` postfix convention: in `EmitCallParameter` (~:4444 in `.tmp/harmony_decomp`) any
+non-special `__`-prefixed parameter name is parsed as a POSITIONAL index via `int.TryParse`
+(`"out_fail_reason"` → "does not contain a valid index" → crash). The both-byref emission branch only
+emits a value-load (`Ldarg`), so writing an out-parameter back from a postfix is impossible in this
+Harmony build. **Fix:** change the warning-text approach — patch the 4-arg overload
+`BuildingDef.IsValidPlaceLocation(GameObject source_go, Vector3 pos, Orientation orientation,
+out string fail_reason)` (BuildingDef.cs:1098) instead, with a positional-arg postfix
+`(__instance, GameObject __0, Vector3 __1, Orientation __2, ref bool __result)` that sets
+`__result = true` under the door gate. That overload feeds ONLY the hover text (BuildToolHoverTextCard.cs:50)
+and the visualizer tint (BuildTool.cs:177) — the survival drag path (`TryBuild` → `TryPlace` → 6-arg
+overload replace_tile:false → replacement fallback → `TryReplaceTile`) never uses it, so placement
+routing is untouched. The tint patch (`IsValidReplaceLocation`) and DoorConfig patch are unchanged.
+
+- [x] Red: trace the hover/preview path — find the actual method (look for `UpdateVis`/`UpdateVisualizer` in BuildTool.cs; where `fail_reason` from non-replacement `BuildingDef.IsValidPlaceLocation` feeds the tooltip; where the preview color is set, cf. `IsValidReplaceLocation` at BuildTool.cs:178); identify exactly where the «free construction space» warning is emitted for a door hovering over a FoundationTile / Backwall occupant. Write to `./.tmp/stage2_hover_trace.md`: (a) the exact call chain, (b) why the plain validity check fails there, (c) that replacement validity (`replace_tile=true`) succeeds for the same cell (that is the failing check — the warning is false)
+- [x] Red (continued): trace the survival drag path end-to-end with the current metadata-only Mod.cs: `BuildTool.TryBuild` → replacement fallback → `TryReplaceTile` (IsReplacementTile plan) → `Constructable.OnCompleteWork`/`FinishConstruction` candidate destruction (both door cells) + `Def.Build`; plus door-over-rock regression (native Diggable path). Confirm no code change is needed here (works in-game per user); record gaps only if found
+- [x] Green: implement the minimal fix in `BuildDoorOverWall/Mod.cs` (door-def scoped) so the hover preview shows a valid state — no «free space» warning, correct preview color — when a valid replacement candidate exists in the door's cell; the drag path must still reach the replacement fallback (survival `TryReplaceTile` / sandbox `InstantBuildReplace`) and must NOT be diverted to plain `TryPlace`/`def.Build`
+- [x] Green: `./.tmp/fix_buld_door_checks.sh` passes (extend it with new assertions if needed, never weaken existing ones); full build green
+- [x] Refactor: keep the fix minimal and commented (English, game file:line references)
 
 **Criterion:** independent acceptance trace (code-level) shows: (a) hover over foundation/Backwall with the door → the visualizer path no longer emits the «free space» warning (validity true when a replacement candidate is valid); (b) survival drag still takes the replacement path (IsReplacementTile plan) and door-over-rock is unchanged; build green.
 **Commit:**
@@ -75,6 +90,16 @@ found. The `DoorConfig` attribute patch (parameterless target) stays as-is (work
 Note: the Stage-1 in-game check proved the replacement candidate gate (`Replaceable`/`CanReplace`)
 already passes for wall/Backwall in survival; re-verify what specifically is missing in InstantBuild mode
 and do not duplicate fixes that Stage 2 already made.
+
+Carry-over from Stage-2 acceptance: the Stage-2 hover patch now makes the 4-arg `IsValidPlaceLocation`
+return true for the door over a valid replacement candidate — and the sandbox instant branch
+(`BuildTool.TryBuild` else-branch at BuildTool.cs:325: `def.IsValidBuildLocation(...) &&
+def.IsValidPlaceLocation(4-arg)` → `def.Build`) consumes exactly that overload. The Stage-3 trace
+must re-verify whether the instant door-over-wall drag now diverts into `def.Build` (wall NOT destroyed)
+instead of the replacement fallback → `InstantBuildReplace`, and whether `IsValidBuildLocation` even
+passes over an occupied cell in that case. Also: the instant replacement fallback additionally gates on
+`IsValidBuildLocation(replace_tile:true)` (BuildTool.cs:379), which the shared helper does not check —
+acceptable in survival (no such gate in the `!flag` branch), must be reconciled for sandbox.
 
 - [ ] Red: independent trace of `BuildTool.TryBuild` in InstantBuild mode for the door def over a FoundationTile / Backwall occupant; assert each fact line-by-line against Assembly-CSharp; record every gap (does the normal gate at BuildTool.cs:325 still pass over a foundation so `def.Build` fires instead of the replacement fallback? what does the multi-cell branch of `InstantBuildReplace` cover/miss?)
 - [ ] Implementation: close gaps so that sandbox drag of the door over a wall → `BuildTool.cs:350` replacement fallback → `InstantBuildReplace` → wall candidate destroyed (both door cells) → `def.Build` spawns the door

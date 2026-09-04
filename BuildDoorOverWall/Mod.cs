@@ -22,11 +22,12 @@ namespace OxygenNotIncluded.Mods
             //                     typeof(int),
             //                     typeof(Orientation),
             //                     typeof(bool),
-            //                     typeof(string).MakeByRefType(),
+            //                     typeof(string), // the real parameter is `out string` (a ByRef type);
+            //                                      // ByRef types are not legal attribute constants (CS0182)
             //                     typeof(bool)
             //                 );
             // var prefix = typeof(UserMod2).GetMethod(
-            //   nameof(BuildingDef_IsValidPlaceLocation_ClearFalseReplacementWarning__Patch)
+            //   nameof(BuildingDef_IsValidPlaceLocation_DoorReplacement__Patch)
             // );
             // harmony.Patch( original , prefix: new HarmonyMethod(prefix));
 
@@ -45,12 +46,13 @@ namespace OxygenNotIncluded.Mods
             // how the DoorConfig.CreateBuildingDef postfix below lands.
             //
             // The two BuildingDef postfixes below are attached PROGRAMMATICALLY
-            // instead of via attributes, because attributes cannot express an
-            // `out` parameter in a target signature: game Harmony v2 resolves
-            // [HarmonyPatch] parameter types via Type.GetMethod(name, allDeclared,
-            // null, paramTypes, []) (AttributePatch, 0Harmony.decompiled.cs:5350),
-            // and plain typeof(string) does not match the `out string` parameter —
-            // only string& (ByRef) does, and a byref Type is not a legal attribute
+            // instead of via attributes, because the IsValidPlaceLocation target
+            // has an `out` parameter and attributes cannot express it: game
+            // Harmony v2 resolves [HarmonyPatch] parameter types via
+            // Type.GetMethod(name, allDeclared, null, paramTypes, [])
+            // (AttributePatch, 0Harmony.decompiled.cs:5350), and plain
+            // typeof(string) does not match the `out string` parameter — only
+            // string& (ByRef) does, and a byref Type is not a legal attribute
             // constant expression (CS0182 in attribute position). The attribute
             // classes for
             // these two postfixes therefore carry NO [HarmonyPatch] attributes;
@@ -58,15 +60,21 @@ namespace OxygenNotIncluded.Mods
             // Harmony.Patch(MethodBase, ...) API (0Harmony.decompiled.cs:6882),
             // with a byref-normalizing reflection lookup that tolerates whether
             // the runtime reports `out T` as T or T&.
+            //
+            // TARGET: the 4-arg overload IsValidPlaceLocation(GameObject, Vector3,
+            // Orientation, out string) (BuildingDef.cs:1098). The FindMethod arity
+            // check (4 parameters) guarantees the 6-arg canonical overload is not
+            // matched, so the survival drag flow (TryPlace, BuildingDef.cs:467,
+            // which uses the 6-arg overload) is never touched.
             MethodInfo validPlace = FindMethod(typeof(BuildingDef), "IsValidPlaceLocation",
-                typeof(GameObject), typeof(int), typeof(Orientation), typeof(bool), typeof(string), typeof(bool));
+                typeof(GameObject), typeof(Vector3), typeof(Orientation), typeof(string));
             if (validPlace == null)
             {
-                UnityEngine.Debug.LogError("[BuildDoorOverWall] could not resolve BuildingDef.IsValidPlaceLocation(GameObject, int, Orientation, bool, out string, bool) — hover-text postfix skipped (game build mismatch?)");
+                UnityEngine.Debug.LogError("[BuildDoorOverWall] could not resolve BuildingDef.IsValidPlaceLocation(GameObject, Vector3, Orientation, out string) — hover-text/visualizer postfix skipped (game build mismatch?)");
             }
             else
             {
-                harmony.Patch(validPlace, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation_ClearFalseReplacementWarning__Patch), nameof(BuildingDef_IsValidPlaceLocation_ClearFalseReplacementWarning__Patch.Postfix)));
+                harmony.Patch(validPlace, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation_DoorReplacement__Patch), nameof(BuildingDef_IsValidPlaceLocation_DoorReplacement__Patch.Postfix)));
             }
             MethodInfo validReplace = FindMethod(typeof(BuildingDef), "IsValidReplaceLocation",
                 typeof(Vector3), typeof(Orientation), typeof(ObjectLayer), typeof(ObjectLayer));
@@ -151,16 +159,20 @@ namespace OxygenNotIncluded.Mods
         }
 
         /// <summary>
-        /// Stage 2 (hover warning): the plain, non-replacement validity check reports
-        /// "unoccupied space" (wall) / "back wall" (drywall) while the door hovers over
-        /// a replacement candidate, so the hover card prints a false warning and the
-        /// preview tint stays red — although the drag succeeds via the game's own
+        /// Stage 2 (hover warning + preview tint): the plain, non-replacement validity
+        /// check reports "unoccupied space" (wall) / "back wall" (drywall) while the
+        /// door hovers over a replacement candidate, so the hover card prints a false
+        /// warning (BuildToolHoverTextCard.cs:50) and the preview tint stays red
+        /// (BuildTool.cs:177) — although the drag succeeds via the game's own
         /// replacement fallback. Both postfixes below re-run the survival-drag gate
-        /// (BuildTool.cs:350-385 plus TryReplaceTile's check at BuildingDef.cs:490) for
-        /// the DOOR DEF ONLY and hide the false failure without touching the bool result
-        /// the drag routing depends on: TryPlace (BuildingDef.cs:467, called from
-        /// BuildTool.cs:323) must keep failing so TryBuild still takes the replacement
-        /// fallback (BuildTool.cs:350), never plain def.Build.
+        /// (BuildTool.cs:350-385 plus TryReplaceTile's check at BuildingDef.cs:490) and
+        /// hide the false failure ONLY on cosmetic paths: the 4-arg
+        /// IsValidPlaceLocation overload (BuildingDef.cs:1098) that feeds the hover
+        /// card and the UpdateVis tint, and the IsValidReplaceLocation tint input.
+        /// The 6-arg canonical overload the drag routing depends on is NEVER patched:
+        /// TryPlace (BuildingDef.cs:467, called from BuildTool.cs:323) must keep
+        /// failing so TryBuild still takes the replacement fallback
+        /// (BuildTool.cs:350), never plain def.Build.
         /// </summary>
 
         // Mirrors the survival drag gate in BuildTool.TryBuild (BuildTool.cs:350-385):
@@ -173,6 +185,11 @@ namespace OxygenNotIncluded.Mods
         //  - TryReplaceTile's own validity check passes (BuildingDef.cs:490)
         private static bool IsReplacementPlacementPossible(BuildingDef def, GameObject source_go, int cell, Orientation orientation)
         {
+            // door-def scope: vanilla defs (exterior walls, windows, thermal blocks, moulding tiles, templates) also set ReplacementLayer/CandidateLayers; the Stage-2 fix must not change their behavior
+            if (def.PrefabID != DoorConfig.ID)
+            {
+                return false;
+            }
             if (def.ReplacementLayer == ObjectLayer.NumLayers || def.ReplacementCandidateLayers == null)
             {
                 return false;
@@ -207,34 +224,48 @@ namespace OxygenNotIncluded.Mods
             return def.IsValidPlaceLocation(source_go, cell, orientation, replace_tile: true, out fail_reason, restrictToActiveWorld: false);
         }
 
-        // 1. Suppress the false warning text.
+        // 1. Suppress the false warning text (and stop the visualizer from painting
+        // the hovered cell invalid).
         // BuildToolHoverTextCard.UpdateHoverElements (BuildToolHoverTextCard.cs:49-55)
-        // prints `fail_reason` whenever the plain check fails. The 4-arg overload it
-        // calls (BuildingDef.cs:1098) funnels into this 6-arg canonical method, so
-        // clearing the out-reason here (door def only, and only when the replacement
-        // drag would actually succeed) makes the card draw an empty line instead of
-        // "Must be built in unoccupied space" / "Obstructed by back wall".
-        // The bool result is left FALSE: every routing decision based on the plain
-        // check (TryPlace, BuildTool.cs:467; instant-build gate, BuildTool.cs:325)
-        // keeps its current outcome, and the drag still falls into the replacement
-        // fallback (BuildTool.cs:350).
+        // prints `fail_reason` whenever this check fails, and BuildTool.UpdateVis
+        // (BuildTool.cs:177) ORs this method's result with IsValidReplaceLocation to
+        // pick red vs white preview tint. The 4-arg overload it targets
+        // (BuildingDef.cs:1098) feeds ONLY those two cosmetic paths — the survival
+        // drag flow (BuildTool.TryBuild -> def.TryPlace, BuildingDef.cs:467) uses the
+        // 6-arg overload and is never touched — so forcing the bool result true here
+        // (and only when the replacement drag would actually succeed) makes the
+        // caller never draw the false fail text / red tint without changing any drag
+        // routing decision.
+        //
+        // WHY THIS SHAPE (round-2 crash fix): the game's 0Harmony has NO postfix
+        // convention for out parameters. In EmitCallParameter
+        // (0Harmony.decompiled.cs ~4444) any parameter name starting with `__` that
+        // is not one of the special names (__instance, __originalMethod, __args,
+        // __result, __resultRef, __state, __exception, __runOriginal) is parsed as a
+        // POSITIONAL index via int.TryParse, so a byref out-reason parameter with a
+        // `__`-prefixed name died with "does not contain a valid index" before the
+        // method was even patched; and the both-byref emission branch emits a value
+        // load (Ldarg), so an out parameter cannot be written back from a postfix at
+        // all in this Harmony version. The postfix therefore does not touch the out
+        // reason — it just flips `__result` to true so the caller (hover card) never
+        // draws the text. Positional names __0/__1/__2 (original parameter indices
+        // 0=source_go, 1=pos, 2=orientation) are bulletproof in this Harmony build.
         // NO [HarmonyPatch] attributes on purpose: the target has an `out string`
         // parameter and attribute targets cannot express byref parameter types
         // (a byref Type is not a legal attribute constant, CS0182; and plain
         // typeof(string) fails Type.GetMethod resolution — see OnLoad). This
-        // class is attached
-        // programmatically in OnLoad via harmony.Patch(...).
-        public static class BuildingDef_IsValidPlaceLocation_ClearFalseReplacementWarning__Patch
+        // class is attached programmatically in OnLoad via harmony.Patch(...).
+        public static class BuildingDef_IsValidPlaceLocation_DoorReplacement__Patch
         {
-            public static void Postfix(BuildingDef __instance, GameObject source_go, int cell, Orientation orientation, bool replace_tile, ref string __out_fail_reason, bool restrictToActiveWorld)
+            public static void Postfix(BuildingDef __instance, GameObject __0, Vector3 __1, Orientation __2, ref bool __result)
             {
-                if (__out_fail_reason == null || replace_tile || __instance.PrefabID != DoorConfig.ID)
+                if (__result)
                 {
                     return;
                 }
-                if (IsReplacementPlacementPossible(__instance, source_go, cell, orientation))
+                if (IsReplacementPlacementPossible(__instance, __0, Grid.PosToCell(__1), __2))
                 {
-                    __out_fail_reason = string.Empty;
+                    __result = true;
                 }
             }
         }

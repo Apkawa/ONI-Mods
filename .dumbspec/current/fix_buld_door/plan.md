@@ -206,14 +206,14 @@ mods (reference: peterhaneve `AirlockDoor` mod).
   `DoorConfig_CreateBuildingDef`, AddBuildingDef wiring present, `copyGroupTag == GameTags.Door`
   present, `BindingFlags.Static` present, idempotent guard present. All Stage-2/2.1 checks kept.
 
-- [ ] Green: implement A–E in Mod.cs + F in the check script; build green
-- [ ] Acceptance: independent audit
+- [x] Green: implement A–F in Mod.cs + F in the check script; build green (0 CS errors; ~50 checks PASS)
+- [x] Live verification: user in-game — «все работает как я хотел» (all five doors now replace walls). Formal independent audit was interrupted by the user's next bug report and is folded into the Stage 2.2.1 audit
 
 **Criterion:** all five door defs (WoodenDoor only when DLC2 is active) get the replacement metadata
 exactly once at creation; vanilla defs unchanged; pneumatic-door behavior byte-identical (same
 metadata values, same gates — only the def test generalized); peterhaneve-style mod doors would be
 caught by the same hook/test; build green; no regression on the Stage-1/2/2.1 confirmed behaviors.
-**Commit:**
+**Commit:** `fix(fix_buld_door): stage 2.2 — generalize door replacement to all door defs (Assets.AddBuildingDef hook + IsDoorDef gate)`
 
 ## Stage 3 — Sandbox: instant wall→door replacement (DEFERRED — user focuses on survival first)
 

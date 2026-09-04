@@ -105,13 +105,9 @@ plus, per GUID:
 
 ## In-game logs
 
-* Windows: `C:\Users\%username%\AppData\LocalLow\Klei\Oxygen Not Included\Player.log`
+* Windows: `%HOMEPATH%\Documents\Klei\OxygenNotIncluded\Player.log`
+* `C:\Users\%username%\AppData\LocalLow\Klei\Oxygen Not Included\Player.log`
 * Linux: `~/.config/unity3d/Klei/Oxygen Not Included/Player.log`
-
-## Game settings
-
-
-* Windows: `%HOMEPATH%\Documents\Klei\OxygenNotIncluded\`
 
 
 # Usefull mods

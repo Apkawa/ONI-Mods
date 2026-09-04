@@ -46,10 +46,9 @@ namespace OxygenNotIncluded.Mods
             // base.OnLoad runs Harmony's PatchAll, which only applies types carrying
             // HarmonyPatch attributes (0Harmony decompiled: PatchAllUncategorized
             // filters by HasHarmonyAttribute, 0Harmony.decompiled.cs:6829). No
-            // attribute-bound classes exist anymore in this mod: all five patches
-            // (the two BuildingDef cosmetic postfixes, the BuildTool.TryBuild postfix,
-            // the Assets.AddBuildingDef metadata postfix and the Stage 2.2.1
-            // Constructable.MarkArea prefix+postfix pair) are attached PROGRAMMATICALLY
+            // attribute-bound classes exist anymore in this mod: all four postfixes
+            // (the two BuildingDef cosmetic ones, the BuildTool.TryBuild one and the
+            // Assets.AddBuildingDef metadata one) are attached PROGRAMMATICALLY
             // below, and PatchAll therefore ignores every patch class in the file.
             //
             // The two BuildingDef postfixes below are attached PROGRAMMATICALLY
@@ -137,27 +136,6 @@ namespace OxygenNotIncluded.Mods
                 PUtil.LogDebug("[BuildDoorOverWall] Патчу replacement metadata postfix на {0}".F(addBuildingDef));
 #endif
                 harmony.Patch(addBuildingDef, postfix: new HarmonyMethod(typeof(Assets_AddBuildingDef_DoorReplacement__Patch), nameof(Assets_AddBuildingDef_DoorReplacement__Patch.Postfix)));
-            }
-            // 5. Stage 2.2.1: Constructable.MarkArea() — private no-param method, resolved by
-            // name only (FindMethod with zero underlying types). The prefix+postfix pair
-            // below keeps the door plan out of the tile layer at cells that never held a
-            // foundation tile (backwall/air) — see the class doc comment.
-            MethodInfo markArea = FindMethod(typeof(Constructable), "MarkArea");
-            if (markArea == null)
-            {
-#if DEBUG
-                PUtil.LogDebug("[BuildDoorOverWall] Constructable.MarkArea() не найдена — door tile-layer unwind пропущен");
-#endif
-                UnityEngine.Debug.LogError("[BuildDoorOverWall] could not resolve Constructable.MarkArea() — door tile-layer unwind skipped (game build mismatch?)");
-            }
-            else
-            {
-#if DEBUG
-                PUtil.LogDebug("[BuildDoorOverWall] Патчу door tile-layer unwind prefix+postfix на {0}".F(markArea));
-#endif
-                harmony.Patch(markArea,
-                    prefix: new HarmonyMethod(typeof(Constructable_MarkArea_DoorTileUnwind__Patch), nameof(Constructable_MarkArea_DoorTileUnwind__Patch.Prefix)),
-                    postfix: new HarmonyMethod(typeof(Constructable_MarkArea_DoorTileUnwind__Patch), nameof(Constructable_MarkArea_DoorTileUnwind__Patch.Postfix)));
             }
         }
 
@@ -739,182 +717,6 @@ namespace OxygenNotIncluded.Mods
                     PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — TryReplaceTile вернул null".F(def.PrefabID, __0));
                 }
 #endif
-            }
-        }
-
-        // 5. Stage 2.2.1: door tile-piece wall-rendering breakage.
-        // The tile-piece doors (PressureDoor/WoodenDoor/ManualPressureDoor/InsulatedDoor:
-        // IsFoundation = true -> TileLayer = FoundationTile -> def.IsTilePiece, unlike the
-        // pneumatic Door) break wall rendering when placed with the lower (anchor) cell in
-        // the air and the upper cell on the wall. Chain (verified in .tmp/game_decomp):
-        // Constructable.OnSpawn (Constructable.cs:343-346) calls the private no-param
-        // MarkArea (Constructable.cs:441-461), which writes the plan into
-        // Grid.Objects[cell, ReplacementTile] at every door cell (def.MarkArea,
-        // BuildingDef.cs:829-843), then — for tile pieces only — rewrites the plan into
-        // Grid.Objects[cell, TileLayer] at EVERY door cell whenever the anchor cell's tile
-        // layer is empty (Constructable.cs:452-458), i.e. INCLUDING the backwall/air cell
-        // that never holds a foundation tile (backwalls live in the separate
-        // BackwallManager.backwallElement array, not in Grid.ObjectLayers), plus
-        // Grid.IsTileUnderConstruction[anchor] = true (Constructable.cs:460, unconditional
-        // for tile pieces). The world mesh formula (World.cs:99: renderedByWorld &&
-        // (Grid.Objects[cell, 9] == null || Grid.IsTileUnderConstruction[cell])) then stops
-        // drawing the wall cell as part of the connected surface, and nothing unwinds the
-        // tile-layer entry (Constructable.UnmarkArea, :463-477, is replacement-layer only,
-        // and SimCellOccupier.DestroySelf never restores RenderedByWorld) — so the
-        // breakage persists after cancel.
-        //
-        // Fix: restore the native anchor-gated invariant around MarkArea:
-        //   - Prefix captures the door area's pre-MarkArea tile-layer occupancy into the
-        //     static s_preMarkTileOccupied (door replacement plans only; the static is
-        //     reset at the top of the prefix so an abandoned prefix can never leak state).
-        //   - Postfix unwinds: for every door cell that NOW holds the plan in the tile
-        //     layer but did NOT hold any foundation tile before MarkArea, clear the entry
-        //     and TileVisualizer.RefreshCell it (already refreshes the 4 neighbors); and if
-        //     the anchor was NOT pre-occupied (the tile branch ran at the anchor) clear
-        //     Grid.IsTileUnderConstruction[anchor]. Case A (anchor ON the wall: anchor WAS
-        //     pre-occupied, branch never ran) is left exactly as it is today — that is
-        //     why it renders fine now (flag true keeps the World.cs:99 formula consistent).
-        //     The mixed case (anchor in air, upper cell on a REAL foundation tile, e.g. a
-        //     floor) is also left untouched: pre-occupied cells keep their tile-layer entry
-        //     (native replacement flow).
-        // Cancel needs no extra patch: the replacement-layer entry is unwound by the
-        // game's UnmarkArea, the tile layer was never written at the wall cell, and
-        // RenderedByWorld self-heals via the World.cs:99 formula on the next sim tick
-        // (both placement and DestroySelf trigger solid-change ticks at the wall cell).
-        //
-        // NO [HarmonyPatch] attributes on purpose (MarkArea is private): attached
-        // programmatically in OnLoad via harmony.Patch(prefix: ..., postfix: ...).
-        // Parameter name: the game's 0Harmony resolves `__N` patch parameters as
-        // POSITIONAL indices of the original method's DECLARED parameters
-        // (0Harmony.decompiled.cs:4453 throws "No parameter found at index N" when the
-        // index is out of range). MarkArea() has ZERO declared parameters, so the
-        // receiver MUST use the special name `__instance` (INSTANCE_PARAM,
-        // 0Harmony.decompiled.cs:4895; InjectionType.Instance -> Ldarg_0, valid for
-        // prefixes and postfixes alike) — the same convention as the TryBuild and
-        // hover patches in this file. (Stage 2.2.1 crash #1: naming the receiver __0
-        // threw at patch-creation time in OnLoad and killed the mod load.)
-        public static class Constructable_MarkArea_DoorTileUnwind__Patch
-        {
-            // Tile cells occupied in the door's tile layer BEFORE MarkArea ran, captured by
-            // the prefix for the plan currently in flight; null when no qualifying
-            // (door replacement, tile-piece) plan is in flight.
-            private static HashSet<int> s_preMarkTileOccupied;
-
-            public static void Prefix(Constructable __instance)
-            {
-                // Reset FIRST: the prefix runs for every MarkArea call, so an abandoned
-                // early return must never leave a stale capture behind for a later postfix.
-                s_preMarkTileOccupied = null;
-                try
-                {
-                    if (__instance == null || !__instance.IsReplacementTile)
-                    {
-#if DEBUG
-                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea prefix: пропуск ({0}, IsReplacementTile={1})".F(__instance == null ? "(null)" : __instance.gameObject.name, __instance == null ? "(null)" : __instance.IsReplacementTile.ToString()));
-#endif
-                        return;
-                    }
-                    Building building = __instance.GetComponent<Building>();
-                    if (building == null)
-                    {
-#if DEBUG
-                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea prefix: {0} — нет Building-компонента".F(__instance.gameObject.name));
-#endif
-                        return;
-                    }
-                    BuildingDef def = building.Def;
-                    if (def == null || !IsDoorDef(def) || !def.IsTilePiece)
-                    {
-#if DEBUG
-                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea prefix: {0} — пропуск (def={1}, IsDoorDef={2}, IsTilePiece={3})".F(__instance.gameObject.name, def == null ? "(null)" : def.PrefabID, def == null ? false : IsDoorDef(def), def == null ? false : def.IsTilePiece));
-#endif
-                        return;
-                    }
-                    s_preMarkTileOccupied = new HashSet<int>();
-                    int anchor = Grid.PosToCell(__instance.transform.GetPosition());
-#if DEBUG
-                    PUtil.LogDebug("[BuildDoorOverWall] MarkArea prefix: def={0} — фиксирую занятость tile-layer до MarkArea (anchor={1})".F(def.PrefabID, anchor));
-#endif
-                    def.RunOnArea(anchor, building.Orientation, (c) =>
-                    {
-                        if (Grid.Objects[c, (int)def.TileLayer] != null)
-                        {
-#if DEBUG
-                            PUtil.LogDebug("[BuildDoorOverWall] MarkArea prefix: def={0} — клетка {1} занята в tile-layer ({2})".F(def.PrefabID, c, Grid.Objects[c, (int)def.TileLayer].name));
-#endif
-                            s_preMarkTileOccupied.Add(c);
-                        }
-                    });
-                }
-                catch (Exception ex)
-                {
-                    UnityEngine.Debug.LogError("[BuildDoorOverWall] Constructable.MarkArea prefix failed — door tile-layer unwind skipped: " + ex);
-                    s_preMarkTileOccupied = null;
-                }
-            }
-
-            public static void Postfix(Constructable __instance)
-            {
-                try
-                {
-                    HashSet<int> preMark = s_preMarkTileOccupied;
-                    // Read and immediately reset: the postfix runs for every MarkArea
-                    // call, so a missing/abandoned capture must not leak into the next one.
-                    s_preMarkTileOccupied = null;
-                    if (preMark == null)
-                    {
-#if DEBUG
-                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea postfix: {0} — preMark == null (не qualifying-план или prefix упал), пропуск".F(__instance == null ? "(null)" : __instance.gameObject.name));
-#endif
-                        return; // not a qualifying door replacement plan (or prefix failed)
-                    }
-                    Building building = __instance.GetComponent<Building>();
-                    if (building == null)
-                    {
-#if DEBUG
-                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea postfix: {0} — нет Building-компонента".F(__instance.gameObject.name));
-#endif
-                        return;
-                    }
-                    BuildingDef def = building.Def;
-                    if (def == null)
-                    {
-#if DEBUG
-                        PUtil.LogDebug("[BuildDoorOverWall] MarkArea postfix: {0} — def == null".F(__instance.gameObject.name));
-#endif
-                        return;
-                    }
-                    int anchor = Grid.PosToCell(__instance.transform.GetPosition());
-#if DEBUG
-                    PUtil.LogDebug("[BuildDoorOverWall] MarkArea postfix: def={0} — отматываю tile-layer (anchor={1}, зафиксированных клеток: {2})".F(def.PrefabID, anchor, preMark.Count));
-#endif
-                    def.RunOnArea(anchor, building.Orientation, (c) =>
-                    {
-                        if (Grid.Objects[c, (int)def.TileLayer] == __instance.gameObject && !preMark.Contains(c))
-                        {
-#if DEBUG
-                            PUtil.LogDebug("[BuildDoorOverWall] MarkArea postfix: def={0} — клетка {1} занята планом, но до MarkArea была пуста — очищаю tile-layer".F(def.PrefabID, c));
-#endif
-                            Grid.Objects[c, (int)def.TileLayer] = null;
-                            TileVisualizer.RefreshCell(c, def.TileLayer, def.ReplacementLayer);
-                        }
-                    });
-                    // The tile branch ran at the anchor (it was empty pre-MarkArea) — it set
-                    // Grid.IsTileUnderConstruction[anchor] = true unconditionally; undo it,
-                    // since the tile layer is now fully unwound for this plan.
-                    if (!preMark.Contains(anchor))
-                    {
-#if DEBUG
-                        PUtil.LogDebug("Grid.IsTileUnderConstruction[{0}] = false".F(anchor));
-#endif
-                        Grid.IsTileUnderConstruction[anchor] = false;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    UnityEngine.Debug.LogError("[BuildDoorOverWall] Constructable.MarkArea postfix failed — door tile-layer unwind incomplete: " + ex);
-                    s_preMarkTileOccupied = null;
-                }
             }
         }
     }

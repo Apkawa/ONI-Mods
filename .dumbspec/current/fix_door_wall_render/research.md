@@ -523,3 +523,80 @@ No open context items remain from the task list: mod patches (§1), Harmony pitf
 game flow incl. rendering & cancellation (§4–§5), log inspection (§6), final report (§7). All six task items are
 recorded with file:line citations. Remaining open questions are deep-trace/fix-design items (in §7), out of
 scope for this context-gathering task.
+
+## 9. Round 3 — regression after Stage-4 hand-off (2026-09-05: user report + prior-agent context)
+
+### 9.1 User observation (the Stage-2 fix did not resolve the bug)
+- With the FRESH dll (commit ac60c46, TryBuild capture/restore in place), the wall rendering is broken
+  **BOTH while the plan is standing (during construction) AND after cancel** — for tile-piece door defs
+  (lower-in-air / upper-in-wall orientation).
+- NEW bug (existed pre-fix, now confirmed by user): after CANCELLING the construction, the affected cell no
+  longer accepts a door plan — the plan turns **red** and a **red fail-reason text** appears on hover.
+- Doors that work PERFECTLY in the same orientation: **Door, WoodenDoor, (regular) Pneumatic** — i.e. exactly
+  the defs with `def.TileLayer == ObjectLayer.NumLayers` (non-tile-piece). The Stage-2 capture/restore step is
+  a no-op for them (NumLayers skip) → the bug is confined to the tile-piece path, which is exactly the path
+  where the Stage-2 capture/restore RUNS. So either the fix does not actually run for those placements, or
+  a later write re-clobbers the restored slot, or the rendering fix mechanics assumed in the Stage-1 trace
+  are wrong.
+
+### 9.2 Grid storage model (Grid.cs:442-465)
+- `Grid.Objects[cell, layer]` is a **view over per-layer dictionaries** `Grid.ObjectLayers[layer]`
+  (`Dictionary<int, GameObject>` per layer).
+- The setter overwrites an existing key; setting `null` removes the key.
+- `ObjectLayers` is NOT serialized; entries are re-established by `OnSpawn` on load.
+- Consequence: a dead (destroyed) GO left in a slot is seen as fake-null by `!= null` / `== null` checks,
+  but **key-presence checks** (`ContainsKey`-style, as in `GetReplacementCandidate`) still see the stale entry.
+
+### 9.3 Cancel path root cause (traced by prior agent; to be re-verified in the Stage-5 red trace)
+- Cancel: `Cancellable.OnCancel(object _)` (`protected virtual`) → `this.DeleteObject()` (**deferred** to end of
+  frame) → `OnCleanUp` → `Constructable.UnmarkArea` clears ONLY the replacement-layer (11) slot.
+- The layer-9 slot of the upper (wall) cell is left with a DEAD reference to the destroyed plan GO:
+  - `GetReplacementCandidate` (BuildingDef.cs:324-345) sees the key present but the value dead → candidate
+    gate fails → no candidate found → the cell stops accepting replacement → **red plan + red hover text**;
+  - the live wall GO fell out of the grid when the plan's `MarkArea` clobbered it at spawn and is never
+    restored on cancel → connection bits read an empty slot → **wall renders as disconnected blocks**.
+- Completion (with the Stage-2 fix) remains self-healing: candidate search finds the restored wall at the
+  upper cell → destroyed + refunded exactly once (Stage-1 trace (a), Stage-3 audit).
+
+### 9.4 v2 fix design (prior agent; pending red re-trace before implementation)
+- Keep the existing TryBuild capture/restore.
+- Register the capture in a static per-plan map `Dictionary<GameObject, DoorTileCapture>` (cells + captured
+  occupants incl. nulls + `tileLayer` + `replacementLayer` ints).
+- New programmatic Harmony postfix on `Cancellable.OnCancel(object)` (5th programmatic patch; no
+  `[HarmonyPatch]` attributes — mod invariant): after the original runs the plan GO is still alive (destruction
+  is deferred) → for each captured cell, if `Grid.Objects[cell, tileLayer] == plan` (identity, both alive),
+  restore `capture.occupants[i]` (null → key removed); then `TileVisualizer.RefreshCell(cell, tileLayer,
+  replacementLayer)` per restored non-null cell; remove the map entry.
+- Map cleanup: `UserMod2.OnFrameUpdate` sweep of dead GO keys (signature to be verified) or lazy removal.
+- Capture area should be the UNION of the spawn-orientation (Neutral) and the plan's actual orientation area
+  (dedup via `HashSet<int>`) for rotated placements.
+
+### 9.5 Open questions for the Stage-5 red re-trace
+- **Q-A (blocks everything): why is the during-construction rendering STILL broken with the fix in place?**
+  Hypotheses to verify line-by-line:
+  (a) the plan in the broken orientation is created by the **NATIVE** `TryBuild` path (the mod postfix bails at
+      its existing-plan guard) → the Stage-2 capture/restore never runs;
+  (b) capture/restore runs, but a LATER write re-clobbers the upper layer-9 slot (e.g. `SetOrientation` after
+      spawn re-runs `Markable`, or another `Constructable` lifecycle re-mark);
+  (c) the `Grid` setter or `TileVisualizer.RefreshCell` does not do what the Stage-1 trace assumed (side
+      effects, dirty-flag semantics, `RenderInfo.occupiedCells` membership);
+  (d) the wall's `RenderInfo` lost the upper cell from `occupiedCells` when the slot was clobbered, so
+      restoring the slot does not restore rendering membership.
+- **Q-B:** exact guard of `Constructable.MarkArea` (what lets the plan overwrite a live wall vs. block it) —
+  needed for (a)/(b).
+- **Q-C:** confirm `UserMod2.OnFrameUpdate` exists and its exact signature in the decompiled API.
+- **Q-D:** re-verify the §9.3 cancel chain and the §9.4 OnCancel-postfix feasibility (method visibility,
+  deferred destruction, identity check at OnCancel time, whether OnCancel is the only user-visible cancel path).
+
+### 9.6 User debug-log facts (in-game, 2026-09-05)
+- **Normal doors** (Door, WoodenDoor, Pneumatic — the working ones): `def.TileLayer = ObjectLayer.NumLayers`,
+  `def.ObjectLayer = NumLayers`.
+- **Problem doors** (tile-piece: Insulated Door, Mechanized Airlock, Manual Airlock):
+  `def.TileLayer = ObjectLayer.FoundationTile`, `def.ObjectLayer = NumLayers`.
+- Consequence: for tile-piece door defs `def.ObjectLayer == NumLayers` while `def.TileLayer == FoundationTile`.
+  Every layer-selection branch that falls back to `def.ObjectLayer` (notably `Constructable.UnmarkArea`'s
+  `IsReplacementTile ? ReplacementLayer : ObjectLayer` branch) therefore resolves to `NumLayers` (a no-op layer)
+  for these defs when `IsReplacementTile` is false — this must be re-verified in the Stage-5 red trace
+  (correction candidate for §9.3's "UnmarkArea clears only layer 11").
+- Prior traces were moved by the user to
+  `.dumbspec/current/fix_door_wall_render/traces/fix_door_wall_render_trace.md`.

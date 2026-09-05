@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
+    <!--Solution root = the folder containing this file (repo root). Defined before the
+         user-props import because property values expand when assigned, not when used.-->
+    <PropertyGroup>
+        <SolutionRoot>$(MSBuildThisFileDirectory)</SolutionRoot>
+    </PropertyGroup>
     <Import Condition=" !Exists('Directory.Build.props.user') " Project="Directory.Build.props.default"/>
     <Import Condition=" Exists('Directory.Build.props.user') " Project="Directory.Build.props.user"/>
 
@@ -20,7 +25,7 @@
         <Optimize>False</Optimize>
     </PropertyGroup>
 
-    <!--Game Release Versions-->
+    <!--Game Release Versions minimumSupportedBuild-->
     <PropertyGroup>
         <WhattaBlast>549456</WhattaBlast>
         <QoL2023June>560597</QoL2023June>
@@ -40,16 +45,47 @@
         <PrehistoricRelease>674504</PrehistoricRelease>
         <QOL2025NovBeta>699556</QOL2025NovBeta>
         <QOL2025NovRelease>700386</QOL2025NovRelease>
+        <Aquatic>731233</Aquatic>
+      	<TargetGameVersion>$(Aquatic)</TargetGameVersion>
         <!--Latest-->
-        <TargetGameVersion>$(QOL2025NovRelease)</TargetGameVersion>
+    </PropertyGroup>
+
+    <!-- DLC IDs (Klei.AI.DlcManager: EXPANSION1_INFO + DLC_PACKS keys;
+         validated by DlcManager.IsDlcId when mod_info.yaml is read) -->
+    <PropertyGroup>
+        <SpacedOutDlcId>EXPANSION1_ID</SpacedOutDlcId>
+        <FrostyPlanetDlcId>DLC2_ID</FrostyPlanetDlcId>
+        <BionicBoosterDlcId>DLC3_ID</BionicBoosterDlcId>
+        <PrehistoricDlcId>DLC4_ID</PrehistoricDlcId>
+        <AquaticDlcId>DLC5_ID</AquaticDlcId>
+        <NeutroniumCosmeticsDlcId>COSMETIC1_ID</NeutroniumCosmeticsDlcId>
+    </PropertyGroup>
+
+    <!-- Mod Info -->
+    <PropertyGroup>
+    		<MinimumSupportedBuild>$(TargetGameVersion)</MinimumSupportedBuild>
+        <!-- # either or both of VANILLA_ID, EXPANSION1_ID; ALL -->
+        <SupportedContent>ALL</SupportedContent> <!-- Use "EXPANSION1_ID" for dlc only -->
+        <!-- DLC gating: point these at the properties above (comma-separated for
+             several), e.g.
+             <requiredDlcIds>$(FrostyPlanetDlcId),$(AquaticDlcId)</requiredDlcIds>
+.
+             The game reads supportedContent only when both are empty. -->
+        <requiredDlcIds />
+        <forbiddenDlcIds />
+        <APIVersion>2</APIVersion>
     </PropertyGroup>
 
 
-    <!--Copyright notice-->
+    <!--Copyright notice / common package identity for all mods in this repo.
+         Per-mod csprojs may override Authors (e.g. co-authored mods) and RepositoryUrl.-->
     <PropertyGroup>
         <CurrentYear>$([System.DateTime]::Now.ToString(`yyyy`))</CurrentYear>
         <Author>Apkawa</Author>
         <AssemblyCopyright>Copyright ©$(Author) $(CurrentYear)</AssemblyCopyright>
+        <Authors>$(Author)</Authors>
+        <Copyright>$(AssemblyCopyright)</Copyright>
+        <RepositoryUrl>https://github.com/Apkawa/ONI-Mods</RepositoryUrl>
     </PropertyGroup>
 
     <!-- Game libs refs-->

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-	
+
 <!--
 	<Target Name="Debug Vars" AfterTargets="PreBuildEvent">
 		<Exec Command="echo $(GameLibsFolder) $(MSBuildThisFileDirectory)" />
@@ -34,9 +34,13 @@
 	<!--Write mod_info.yaml file-->
 	<Target Name="GenerateModInfoYaml" BeforeTargets="PrepareForRun" Condition="'$(DoNotBuildAsMod)' != 'true'">
 		<ItemGroup>
-			<ModInfoLines Include="minimumSupportedBuild: $(TargetGameVersion)"/>
+			<ModInfoLines Include="minimumSupportedBuild: $(MinimumSupportedBuild)"/>
 			<ModInfoLines Include="version: $(Version)"/>
 			<ModInfoLines Include="APIVersion: 2"/>
+			<!-- The game still reads this (KMod.Mod: converted to requiredDlcIds/forbiddenDlcIds),
+			     but logs a deprecation devlog warning; modern replacement is the two
+			     *DlcIds fields below. -->
+			<ModInfoLines Include="supportedContent: $(SupportedContent)" Condition="'$(SupportedContent)' != ''"/>
 			<ModInfoLines Include="requiredDlcIds:" Condition="'$(RequiredDlcIds)' != ''"/>
 			<ModInfoLines Include="$([System.String]::Copy('$(RequiredDlcIds)').Insert(0,' - ').Replace(',','%0a- '))" Condition="'$(RequiredDlcIds)' != ''"/>
 			<ModInfoLines Include="forbiddenDlcIds:" Condition="'$(ForbiddenDlcIds)' != ''"/>
@@ -47,8 +51,8 @@
       <FileWrites Include="$(TargetDir)/mod_info.yaml" Condition="Exists('$(TargetDir)/mod_info.yaml')"/>
     </ItemGroup>
 	</Target>
-	
-	
+
+
 	<!--Merges all dlls in the output folder into a single dll.
 	     Drives the cross-platform dotnet-ilrepack CLI (local tool manifest in
 	     .config/dotnet-tools.json). The legacy ILRepack.Lib.MSBuild.Task task assembly
@@ -93,7 +97,7 @@
 			$(TargetDir)mod.yaml;
 			$(TargetDir)mod_info.yaml;
 		  "
-		  
+
 		  DestinationFolder="$(TargetFolder)"/>
 
 		<Message Text="Copy ModAssets to $(TargetFolder)" Importance="High"></Message>

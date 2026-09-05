@@ -1,7 +1,7 @@
 # Paths 
 
 - **Game dlls:** `~/ONI/dlls`
-- **Location for store mods:** `~/ONI/mods/`
+- **Location for store mods:** `./.tmp/build_mod_dir/`
 - **Location for game log:** `~/ONI/logs/Oxygen Not Included/Player.log`
 - In the agent sandbox `~/ONI` is **read-only** (workspace-write policy): the
   `CopyModsToDevFolder` step then fails with "Read-only file system" (MSB3027).

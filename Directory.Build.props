@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
+    <!--Solution root = the folder containing this file (repo root). Defined before the
+         user-props import because property values expand when assigned, not when used.-->
+    <PropertyGroup>
+        <SolutionRoot>$(MSBuildThisFileDirectory)</SolutionRoot>
+    </PropertyGroup>
     <Import Condition=" !Exists('Directory.Build.props.user') " Project="Directory.Build.props.default"/>
     <Import Condition=" Exists('Directory.Build.props.user') " Project="Directory.Build.props.user"/>
 
@@ -20,7 +25,7 @@
         <Optimize>False</Optimize>
     </PropertyGroup>
 
-    <!--Game Release Versions-->
+    <!--Game Release Versions minimumSupportedBuild-->
     <PropertyGroup>
         <WhattaBlast>549456</WhattaBlast>
         <QoL2023June>560597</QoL2023June>
@@ -40,27 +45,64 @@
         <PrehistoricRelease>674504</PrehistoricRelease>
         <QOL2025NovBeta>699556</QOL2025NovBeta>
         <QOL2025NovRelease>700386</QOL2025NovRelease>
+        <Aquatic>731233</Aquatic>
+      	<TargetGameVersion>$(Aquatic)</TargetGameVersion>
         <!--Latest-->
-        <TargetGameVersion>$(QOL2025NovRelease)</TargetGameVersion>
+    </PropertyGroup>
+
+    <!-- DLC IDs (Klei.AI.DlcManager: EXPANSION1_INFO + DLC_PACKS keys;
+         validated by DlcManager.IsDlcId when mod_info.yaml is read) -->
+    <PropertyGroup>
+        <SpacedOutDlcId>EXPANSION1_ID</SpacedOutDlcId>
+        <FrostyPlanetDlcId>DLC2_ID</FrostyPlanetDlcId>
+        <BionicBoosterDlcId>DLC3_ID</BionicBoosterDlcId>
+        <PrehistoricDlcId>DLC4_ID</PrehistoricDlcId>
+        <AquaticDlcId>DLC5_ID</AquaticDlcId>
+        <NeutroniumCosmeticsDlcId>COSMETIC1_ID</NeutroniumCosmeticsDlcId>
+    </PropertyGroup>
+
+    <!-- Mod Info -->
+    <PropertyGroup>
+    		<MinimumSupportedBuild>$(TargetGameVersion)</MinimumSupportedBuild>
+        <!-- # either or both of VANILLA_ID, EXPANSION1_ID; ALL -->
+        <SupportedContent>ALL</SupportedContent> <!-- Use "EXPANSION1_ID" for dlc only -->
+        <!-- DLC gating: point these at the properties above (comma-separated for
+             several), e.g.
+             <requiredDlcIds>$(FrostyPlanetDlcId),$(AquaticDlcId)</requiredDlcIds>
+.
+             The game reads supportedContent only when both are empty. -->
+        <requiredDlcIds />
+        <forbiddenDlcIds />
+        <APIVersion>2</APIVersion>
     </PropertyGroup>
 
 
-    <!--Copyright notice-->
+    <!--Copyright notice / common package identity for all mods in this repo.
+         Per-mod csprojs may override Authors (e.g. co-authored mods) and RepositoryUrl.-->
     <PropertyGroup>
         <CurrentYear>$([System.DateTime]::Now.ToString(`yyyy`))</CurrentYear>
         <Author>Apkawa</Author>
         <AssemblyCopyright>Copyright ©$(Author) $(CurrentYear)</AssemblyCopyright>
+        <Authors>$(Author)</Authors>
+        <Copyright>$(AssemblyCopyright)</Copyright>
+        <RepositoryUrl>https://github.com/Apkawa/ONI-Mods</RepositoryUrl>
     </PropertyGroup>
 
     <!-- Game libs refs-->
     <ItemGroup>
-        <!--		Reqired-->
+        <!-- The main game dlls. <Publicize> makes BepInEx.AssemblyPublicizer.MSBuild
+             rewrite them (in-process, into obj/.../publicized/) so internal members
+             become public for our Harmony patches. -->
         <Reference Include="Assembly-CSharp">
             <HintPath>$(GameLibsFolder)/Assembly-CSharp.dll</HintPath>
+            <Publicize>true</Publicize>
+            <PublicizeCompilerGenerated>false</PublicizeCompilerGenerated>
             <Private>False</Private>
         </Reference>
         <Reference Include="Assembly-CSharp-firstpass">
             <HintPath>$(GameLibsFolder)/Assembly-CSharp-firstpass.dll</HintPath>
+            <Publicize>true</Publicize>
+            <PublicizeCompilerGenerated>false</PublicizeCompilerGenerated>
             <Private>False</Private>
         </Reference>
         <Reference Include="0Harmony">
@@ -139,21 +181,44 @@
     </ItemGroup>
 
 
+    <!-- Publicizes assemblies marked with <Publicize>true</Publicize> right in the build.
+         NOTE: BepInEx.AssemblyPublicizer.CLI is a dotnet *tool* and cannot be used as a
+         PackageReference (NU1212) — the .MSBuild variant carries the actual MSBuild task. -->
     <ItemGroup Condition="'$(IsMod)' == 'true'">
-        <PackageReference Include="Aze.Publicise.MSBuild.Task" Version="*">
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3">
             <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <!-- build = the Publicize task/props; contentfiles = IgnoresAccessChecksToAttribute.cs.
+                 Deliberately NO 'runtime' asset: the task ships next to its own lib folder
+                 and its assemblies must NOT end up in bin/. -->
+            <IncludeAssets>build; contentfiles</IncludeAssets>
         </PackageReference>
     </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Harmony" Version="0.3.0"/>
+    <!-- NOTE: do NOT add NuGet "Harmony" (0Harmony 1.x). The game itself bundles
+         0Harmony v2 (0Harmony.dll in $(GameLibsFolder)) and UserMod2.OnLoad(Harmony)
+         expects v2 types — the game's dll is referenced above. -->
+
+    <!-- .NET Framework reference assemblies for Linux/macOS builds (MSB3644 otherwise).
+         Each package activates only for its own TargetFrameworkVersion (v4.7.1 / v4.8),
+         so both can coexist. -->
+    <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+        <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net471" Version="1.0.3">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
     </ItemGroup>
 
+    <!-- ILRepack: the legacy ILRepack.Lib.MSBuild.Task 2.0.12 task assembly only loads
+         under full .NET Framework MSBuild (needs Microsoft.Build.Utilities.v4.0).
+         Instead we pull the modern cross-platform dotnet-ilrepack package and run its
+         net8.0 CLI directly (see the ILRepack target in Directory.Build.targets).
+         2.0.45 is the last release whose tool targets net8 (2.0.46+ need .NET 10). -->
     <ItemGroup Condition="'$(IsPacked)' == 'true'">
-        <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="*">
+        <PackageReference Include="dotnet-ilrepack" Version="2.0.45">
             <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <ExcludeAssets>all</ExcludeAssets>
         </PackageReference>
     </ItemGroup>
 

@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-	
+
+<!--
 	<Target Name="Debug Vars" AfterTargets="PreBuildEvent">
 		<Exec Command="echo $(GameLibsFolder) $(MSBuildThisFileDirectory)" />
 		<Exec Command="echo $(MSBuildThisFileDirectory)" />
 	</Target>
+-->
 
 	<Target Name="Clean" BeforeTargets="PreBuildEvent">
-		<Exec Command="echo $(TargetDir)" />
+<!--		<Exec Command="echo $(TargetDir)" />-->
 		<Message Text="### Start Clean before build"
 				 Importance="high" />
 		<RemoveDir Directories="$(TargetDir)" />
@@ -32,9 +34,13 @@
 	<!--Write mod_info.yaml file-->
 	<Target Name="GenerateModInfoYaml" BeforeTargets="PrepareForRun" Condition="'$(DoNotBuildAsMod)' != 'true'">
 		<ItemGroup>
-			<ModInfoLines Include="minimumSupportedBuild: $(TargetGameVersion)"/>
+			<ModInfoLines Include="minimumSupportedBuild: $(MinimumSupportedBuild)"/>
 			<ModInfoLines Include="version: $(Version)"/>
 			<ModInfoLines Include="APIVersion: 2"/>
+			<!-- The game still reads this (KMod.Mod: converted to requiredDlcIds/forbiddenDlcIds),
+			     but logs a deprecation devlog warning; modern replacement is the two
+			     *DlcIds fields below. -->
+			<ModInfoLines Include="supportedContent: $(SupportedContent)" Condition="'$(SupportedContent)' != ''"/>
 			<ModInfoLines Include="requiredDlcIds:" Condition="'$(RequiredDlcIds)' != ''"/>
 			<ModInfoLines Include="$([System.String]::Copy('$(RequiredDlcIds)').Insert(0,' - ').Replace(',','%0a- '))" Condition="'$(RequiredDlcIds)' != ''"/>
 			<ModInfoLines Include="forbiddenDlcIds:" Condition="'$(ForbiddenDlcIds)' != ''"/>
@@ -45,23 +51,26 @@
       <FileWrites Include="$(TargetDir)/mod_info.yaml" Condition="Exists('$(TargetDir)/mod_info.yaml')"/>
     </ItemGroup>
 	</Target>
-	
-	
-	<!--Merges all dlls in the output folder into a single dll-->
+
+
+	<!--Merges all dlls in the output folder into a single dll.
+	     Drives the cross-platform dotnet-ilrepack CLI (local tool manifest in
+	     .config/dotnet-tools.json). The legacy ILRepack.Lib.MSBuild.Task task assembly
+	     only loads under full .NET Framework MSBuild (MSB4062 under the dotnet SDK:
+	     missing Microsoft.Build.Utilities.v4.0). -->
 	<Target Name="ILRepack" AfterTargets="Build" Condition="'$(IsPacked)' == 'true'">
 		<ItemGroup>
-			<InputAssemblies Include="$(TargetPath)" />
-			<InputAssemblies
+			<RepackAssemblies
 					Include="$(TargetDir)\*.dll"
 					Exclude="$(TargetPath); **/*Harmony.dll; **/Splat.dll; **/Assembly-*; **_public.dll ;**Newtonsoft.Json;**/System.*; **/Microsoft.*; **/Unity*" />
 		</ItemGroup>
-
-		<ILRepack
-		  TargetKind="SameAsPrimaryAssembly"
-		  InputAssemblies="@(InputAssemblies)"
-		  Wildcards="true"
-		  LibraryPath="$(GameLibsFolder)"
-		  OutputFile="$(TargetPath)"/>
+		<PropertyGroup>
+			<RepackAssemblyArgs>@(RepackAssemblies->'&quot;%(FullPath)&quot;', ' ')</RepackAssemblyArgs>
+			<!-- Tools folder of the dotnet-ilrepack package (keep in sync with the
+			     version in Directory.Build.props) -->
+			<IlrepackToolPath>$([System.IO.Path]::Combine('$(NuGetPackageRoot)', 'dotnet-ilrepack', '2.0.45', 'tools', 'net8.0', 'any', 'ILRepackTool.dll'))</IlrepackToolPath>
+		</PropertyGroup>
+		<Exec Command="dotnet &quot;$(IlrepackToolPath)&quot; /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; $(RepackAssemblyArgs) /lib:&quot;$(GameLibsFolder)&quot;" />
 	</Target>
 
 	<PropertyGroup>
@@ -88,7 +97,7 @@
 			$(TargetDir)mod.yaml;
 			$(TargetDir)mod_info.yaml;
 		  "
-		  
+
 		  DestinationFolder="$(TargetFolder)"/>
 
 		<Message Text="Copy ModAssets to $(TargetFolder)" Importance="High"></Message>
@@ -97,6 +106,57 @@
 
 		<Message Text="Copied build files" Importance="High" />
 
+	</Target>
+
+
+
+	<!--
+		Legacy publicise targets removed: game dlls are now publicized in-process by
+		BepInEx.AssemblyPublicizer.MSBuild (see <Publicize> metadata on the references
+		in Directory.Build.props). The PublicisedAssembly folder is no longer needed.
+	-->
+
+	<ItemGroup>
+		<GameRefAssemblies Include="
+					    Assembly-CSharp.dll;
+					    Assembly-CSharp-firstpass.dll;
+					    0Harmony.dll;
+					    FMODUnity.dll;
+					    Newtonsoft.Json.dll;
+					    UnityEngine.dll;
+					    UnityEngine.CoreModule.dll;
+					    UnityEngine.ImageConversionModule.dll;
+					    UnityEngine.AssetBundleModule.dll;
+					    UnityEngine.PhysicsModule.dll;
+					    UnityEngine.Physics2DModule.dll;
+					    UnityEngine.ParticleSystemModule.dll;
+					    UnityEngine.InputLegacyModule.dll;
+					    Unity.TextMeshPro.dll;
+					    UnityEngine.TextRenderingModule.dll;
+					    UnityEngine.UI.dll;
+					    UnityEngine.UIModule.dll;
+					    UnityEngine.UnityWebRequestModule.dll;
+					    Ionic.Zip.dll;
+					    Newtonsoft.Json.dll;
+					    com.rlabrecque.steamworks.net.dll;
+					    netstandard.dll
+					    " />
+		<RefAssemblies Include="../PublicisedAssembly/*.dll; @(GameRefAssemblies->'$(GameLibsFolder)\%(Identity)')" />
+	</ItemGroup>
+	<Target Name="GenerateRefAssemblies"
+			Inputs="@(RefAssemblies)"
+			Outputs="@(RefAssemblies->'../Lib/%(Filename)%(Extension)')"
+			AfterTargets="Publicise"
+			BeforeTargets="BeforeResolveReferences"
+			Condition="'$(GameLibsFolder)' != '../Lib' and '$(RefasmerInstalled)' != '0' and '$(IsMod)' == 'true'">
+
+		<!--Workaround for paths containing spaces, e.g. "Program Files (x86)"-->
+		<!--For some reason, adding the quotes to GameLibsFolder does not work-->
+		<ItemGroup>
+			<RefAsmerArguments Include="@(RefAssemblies -> '&quot;%(FullPath)&quot;', ' ')" />
+		</ItemGroup>
+
+		<Exec Command="Refasmer -v -O ../Lib --all -c @(RefAsmerArguments)" />
 	</Target>
 
 

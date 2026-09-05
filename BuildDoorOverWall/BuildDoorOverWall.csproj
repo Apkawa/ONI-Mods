@@ -1,14 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 <!--    <Import Project="$(MSBuildThisFileDirectory)/../Directory.Build.props" />-->
-    
-    <!-- General Package Properties -->
+
+    <!-- General Package Properties
+         (Authors/Copyright/RepositoryUrl come from the common Directory.Build.props) -->
     <PropertyGroup>
         <PackageId>BuildDoorOverWall</PackageId>
         <Version>0.0.1</Version>
-        <Authors>Apkawa</Authors>
-        <Copyright>$(AssemblyCopyright)</Copyright>
-        <RepositoryUrl>https://github.com/Apkawa/Oni-Mods</RepositoryUrl>
-        <TargetFrameworks>net471</TargetFrameworks>
+        <TargetFramework>net48</TargetFramework>
     </PropertyGroup>
 
 
@@ -30,11 +28,8 @@
     <PropertyGroup>
         <ModName>$(PackageId)</ModName>
         <ModDescription />
-        <SupportedContent>ALL</SupportedContent> <!-- Use "EXPANSION1_ID" for dlc only -->
-        <MinimumSupportedBuild>$(TargetGameVersion)</MinimumSupportedBuild>
-        <APIVersion>2</APIVersion>
     </PropertyGroup>
-    
+
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
         <OutDir>bin</OutDir>
     </PropertyGroup>

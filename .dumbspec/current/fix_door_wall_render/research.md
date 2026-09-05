@@ -600,3 +600,41 @@ scope for this context-gathering task.
   (correction candidate for §9.3's "UnmarkArea clears only layer 11").
 - Prior traces were moved by the user to
   `.dumbspec/current/fix_door_wall_render/traces/fix_door_wall_render_trace.md`.
+
+### 9.7 Final resolution (2026-09-05): flip-anchor approach supersedes all earlier fix designs
+
+**Key mechanism (answers Q-B):** `Constructable.MarkArea` (Constructable.cs:441-461) checks its guard
+`Grid.Objects[num, (int)def.TileLayer] == null` on the ANCHOR cell ONLY (`num` = the plan's spawn cell),
+but the second `def.MarkArea` it triggers writes the plan into the TileLayer slot of EVERY area cell
+(BuildingDef.cs:829-843, no per-cell occupancy guard). Therefore:
+- Broken orientation (anchor = air cell): the guard passes → the live wall's layer-9 slot is clobbered →
+  rendering breaks while the plan stands AND after cancel, and completion cannot find the candidate
+  (hidden bug #2, orphaned wall).
+- Anchor moved onto the live wall: the guard FAILS → NO layer-9 write at all → the wall never leaves the grid.
+
+**Stage-2 fix status (capture/restore, ac60c46):** the user disabled it in-tree with an early `return;`
+(«Весь этот код ниже бесполезный, проблему не решает») and reported it as not working in-game. The §9.5
+hypotheses (a)–(d) were never re-traced: the user cancelled both re-trace dispatches and pivoted to their
+own flip approach. The §9.4 v2 design (OnCancel postfix) is superseded without implementation.
+
+**Final fix (user-driven, implemented inside the existing TryBuild postfix, no new patch/Harmony binding):**
+1. Flip the orientation: `Neutral→R180`, `R90→R270` (user-authored, commit 688fec9) — the door "stands on
+   its head": the anchor part lands in the wall.
+2. Move the plan ANCHOR to the candidate (wall) cell: the area-aware candidate search already visits every
+   door cell; the cell where the candidate was found (`candidateCell`) becomes `anchorCell`, so both
+   `pos = Grid.CellToPosCBC(anchorCell, ...)` and the replacement-layer slot write land on the wall cell.
+   The flipped area from that anchor covers exactly the same two cells (wall + air). Equivalent to
+   `Grid.CellAbove(__0)`/`Grid.CellRight(__0)` for these defs; `candidateCell` was chosen so the anchor is
+   ground truth from the same `RunOnArea` walk the rest of the postfix uses (no hardcoded offset).
+3. The dead capture/restore block (behind the user's early `return;`) was removed (Mod.cs −46 lines).
+
+**Consequences (verified in-game by the user, 2026-09-05, «все работает идеально»):**
+- During construction: the wall stays in `Grid.Objects[*, 9]` → connection bits intact → no broken borders
+  (identical grid state to the proven-working "whole door in wall" placement).
+- Cancel: no layer-9 clobber ever happened → no dead reference in any slot → the cell accepts a door again.
+  (The plan's layer-11 slot holds a dead plan ref after cancel — a harmless fake-null, identical to vanilla
+  tile-piece replacement behavior; `UnmarkArea`'s `IsReplacementTile=false` branch resolves to the no-op
+  `NumLayers` layer per §9.6.)
+- Completion: the anchor candidate IS the live wall (the plan's anchor is the wall cell) → destroyed +
+  refunded exactly once with the `ObjectReplaced` trigger — the vanilla replacement flow. The hidden
+  orphan-wall bug #2 (spec point 6) becomes impossible: the wall was never deregistered from the grid.

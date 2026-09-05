@@ -472,6 +472,7 @@ namespace OxygenNotIncluded.Mods
                 }
                 // Area-aware candidate with the native gate (BuildTool.cs:352-364).
                 GameObject candidate = null;
+                int candidateCell = -1;
                 def.RunOnArea(__0, __instance.buildingOrientation, (c) =>
                 {
                     if (candidate != null)
@@ -508,6 +509,7 @@ namespace OxygenNotIncluded.Mods
                     PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: клетка {0} — найден кандидат {1}".F(c, local.name));
 #endif
                     candidate = local;
+                    candidateCell = c;
                 });
                 if (candidate == null)
                 {
@@ -557,21 +559,25 @@ namespace OxygenNotIncluded.Mods
                 PUtil.LogDebug("[BuildDoorOverWall] def.TileLayer={0} def.ReplacementLayer={1} ObjectLayer.NumLayers={1}".F(def.TileLayer, def.ReplacementLayer, ObjectLayer.NumLayers));
 #endif
                 // Create the plan exactly like the native fallback tail (BuildTool.cs:377-379).
-                Vector3 pos = Grid.CellToPosCBC(__0, Grid.SceneLayer.Building);
                 Orientation orientation = __instance.buildingOrientation;
+                int anchorCell = __0;
                 if (def.TileLayer != ObjectLayer.NumLayers) {
                   // pos = взять позицию верхней части двери
-                  // Идея в том чтобы перевернуть дверь вверх ногами и ставить без бага
+                  // Идея в том чтобы отзеркалировать дверь и ставить без бага
                  if(orientation == Orientation.Neutral) {
                   orientation = Orientation.R180;
                  }
                  if (orientation == Orientation.R90) {
                   orientation = Orientation.R270;
                  }
+                 // якорь плана = клетка стены (кандидат): guard MarkArea (Constructable.cs:452)
+                 // не вытеснит стену из TileLayer-слота, т.к. слот якоря уже занят живой стеной
+                 anchorCell = candidateCell;
                 }
+                Vector3 pos = Grid.CellToPosCBC(anchorCell, Grid.SceneLayer.Building);
                 PUtil.LogDebug("orientation={0}; __instance.buildingOrientation={1}".F(orientation, __instance.buildingOrientation));
                 GameObject plan = def.TryReplaceTile(visualizer, pos, orientation, selected, __instance.facadeID);
-                Grid.Objects[__0, (int)def.ReplacementLayer] = plan;
+                Grid.Objects[anchorCell, (int)def.ReplacementLayer] = plan;
 
 #if DEBUG
                 PUtil.LogDebug("def.TryReplaceTile({0},{1},{2},{3}, {4}) => plan={5}".F(visualizer, pos, orientation, selected, __instance.facadeID, plan));
@@ -609,52 +615,6 @@ namespace OxygenNotIncluded.Mods
 #endif
                     }
                 }
-                // NOTE Я добавил ранний возврат вместо комментирования кода
-                return;
-                // NOTE Весь этот код ниже бесполезный, проблему не решает
-
-                // Tile-piece doors (def.TileLayer != ObjectLayer.NumLayers, e.g. PressureDoor)
-                // write the plan into the TileLayer slot of every door cell INSIDE the
-                // TryReplaceTile call below: KInstantiate -> Constructable.OnSpawn -> MarkArea
-                // (Constructable.cs:441-461) runs BuildingDef.MarkArea synchronously
-                // (BuildingDef.cs:829-843), overwriting Grid.Objects[cell, TileLayer] in both
-                // cells before the call returns. Capture the current TileLayer occupant of
-                // every area cell now — the same area/orientation walk the candidate search
-                // above uses — so a live wall in a non-anchor cell can be restored afterwards.
-                List<int> areaCells = new List<int>();
-                List<GameObject> capturedTileObjects = new List<GameObject>();
-                if (def.TileLayer != ObjectLayer.NumLayers)
-                {
-                    def.RunOnArea(__0, __instance.buildingOrientation, (c) =>
-                    {
-                        areaCells.Add(c);
-                        capturedTileObjects.Add(Grid.Objects[c, (int)def.TileLayer]);
-                    });
-                }
-                if (plan != null && def.TileLayer != ObjectLayer.NumLayers)
-                {
-                    // Restore ONLY the captured non-null occupants. The anchor capture is null in
-                    // the broken placement (anchor was air), so nothing is restored there and the
-                    // plan legitimately keeps its own anchor TileLayer slot (Constructable.cs:441-461
-                    // wrote it and owns it until completion). Restoring the wall into its own cell
-                    // makes completion's candidate lookup (BuildingDef.cs:326-338, the
-                    // BuildingComplete gate) find it at the upper cell and destroy + refund it
-                    // exactly once (Constructable.cs:234-254). One RefreshCell per restored cell
-                    // rebuilds the block-tile RenderInfos; its 4-neighbor sweep (TileVisualizer.cs:23-33)
-                    // covers the anchor too, so no separate anchor refresh is needed.
-                    for (int i = 0; i < areaCells.Count; i++)
-                    {
-                        GameObject captured = capturedTileObjects[i];
-                        if (captured != null)
-                        {
-                            Grid.Objects[areaCells[i], (int)def.TileLayer] = captured;
-                            TileVisualizer.RefreshCell(areaCells[i], def.TileLayer, def.ReplacementLayer);
-                        }
-                    }
-                }
-#if DEBUG
-                PUtil.LogDebug("[BuildDoorOverWall] TryBuild postfix: def={0} cell={1} — создан replacement-plan {2} (кандидат {3}, pos={4})".F(def.PrefabID, __0, plan == null ? "(null)" : plan.name, candidate.name, pos));
-#endif
             }
         }
     }

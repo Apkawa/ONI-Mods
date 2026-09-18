@@ -20,10 +20,15 @@
 
 	<!--Write mod.yaml file-->
 	<Target Name="GenerateModYaml" BeforeTargets="PrepareForRun" Condition="'$(DoNotBuildAsMod)' != 'true'">
+		<!--Configuration-dependent title/staticID: the dev build advertises itself
+		     with a [DEBUG] title and a _dev staticID so its folder and the mod
+		     manager entry are unambiguous; release keeps the plain values.-->
 		<ItemGroup>
-			<ModLines Include="title: '$(ModName)'"/>
+			<ModLines Include="title: '$(ModName)'" Condition="'$(Configuration)' == 'Release'"/>
+			<ModLines Include="title: '$(ModName) [DEBUG]'" Condition="'$(Configuration)' != 'Release'"/>
 			<ModLines Include="description: &quot;$([System.String]::Copy('$(ModDescription)').Replace('&quot;', '\&quot;'))&quot;"/>
-			<ModLines Include="staticID: $(AssemblyName)"/>
+			<ModLines Include="staticID: $(AssemblyName)" Condition="'$(Configuration)' == 'Release'"/>
+			<ModLines Include="staticID: $(AssemblyName)_dev" Condition="'$(Configuration)' != 'Release'"/>
 			<!--<ModLines Include="steamID: $(SteamId)" Condition="'$(SteamId)' != ''"/>--> <!--Causes recoverable parse errors :/-->
 		</ItemGroup>
 		<WriteLinesToFile File="$(TargetDir)/mod.yaml" Overwrite="true" Lines="@(ModLines)"/>
@@ -74,7 +79,9 @@
 	</Target>
 
 	<PropertyGroup>
-		<TargetFolder Condition="'$(GameLibsFolder)' != '../Lib'">$(ModFolder)\$(TargetName)_dev\</TargetFolder>
+		<ModBuildFlavor Condition="'$(Configuration)' == 'Release'">release</ModBuildFlavor>
+		<ModBuildFlavor Condition="'$(Configuration)' != 'Release'">dev</ModBuildFlavor>
+		<TargetFolder Condition="'$(GameLibsFolder)' != '../Lib'">$(ModFolder)\$(TargetName)_$(ModBuildFlavor)\</TargetFolder>
 		<TargetFolder Condition="'$(GameLibsFolder)' == '../Lib'">../Builds\$(TargetName)</TargetFolder>
 	</PropertyGroup>
 

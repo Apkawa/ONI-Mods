@@ -16,9 +16,18 @@ Oxygen Not Included (ONI) mods. Currently building: **BuildDoorOverWall** (+ sha
 
 From the repo root:
 
+For debug:
+* `dotnet build`
+* For sandbox: 
 ```sh
 export NUGET_PACKAGES="$PWD/.cache/nuget/packages" NUGET_HTTP_CACHE_PATH="$PWD/.cache/nuget/http-cache"
 dotnet build ONI-mods.sln -c Debug
+```
+
+For release:
+
+```sh
+dotnet build -c Release
 ```
 
 NuGet caches live in the repo under `.cache/` (gitignored, together with `.tmp/` scratch).
@@ -27,9 +36,15 @@ Result:
 
 * `BuildDoorOverWall/bin/Debug/net48/BuildDoorOverWall.dll` — **packed** single dll
   (UtilLibs + PeterHan.PLib inlined), plus generated `mod.yaml` / `mod_info.yaml`.
-* `CopyModsToDevFolder` then copies dll + pdb + yamls to `~/ONI/mods/BuildDoorOverWall_dev/`
-  — ready for the in-game mod manager. (Inside a sandbox that step may fail with
+* `CopyModsToDevFolder` then copies dll + pdb + yamls to the per-configuration
+  folder — `~/ONI/mods/BuildDoorOverWall_dev/` for Debug,
+  `~/ONI/mods/BuildDoorOverWall_release/` for Release — ready for the in-game
+  mod manager. (Inside a sandbox that step may fail with
   "Read-only file system"; the artifacts remain in `bin/` and can be copied by hand.)
+  The Debug build advertises itself as `BuildDoorOverWall [DEBUG]`
+  (`staticID: BuildDoorOverWall_dev`) so the installed flavor is always visible;
+  Release keeps the plain title/staticID. Enable only ONE flavor at a time —
+  both active would run the mod logic (and patches) twice.
 * Release builds use `<OutDir>bin</OutDir>` → output lands in `BuildDoorOverWall/bin/`
   directly (no `net48/` subfolder).
 
@@ -71,6 +86,14 @@ Result:
    references the `dotnet-ilrepack` package and runs `dotnet ILRepackTool.dll`
    directly. Pinned to **2.0.45** — last release targeting net8 (2.0.46+ need .NET 10).
    Runs only for projects with `IsPacked=true`.
+
+## Decompilation
+
+As example use `ilspycmd`
+
+```sh
+DOTNET_ROLL_FORWARD=Major ilspycmd path/to/oni-game/OxygenNotIncluded_Data/Managed/Assembly-CSharp.dll -o ./Assembly-CSharp -p
+```
 
 ## Disabled solution projects
 
@@ -117,6 +140,7 @@ plus, per GUID:
 * [Debug Buttons](https://steamcommunity.com/sharedfiles/filedetails/?id=3120193648)
 
 ## Links
+
 * [Cairath/Oxygen-Not-Included-Modding wiki](https://github.com/Cairath/Oxygen-Not-Included-Modding/wiki)
 * [[Tutorial] How to create a basic mod for ONI
   ](https://forums.kleientertainment.com/forums/topic/107833-tutorial-how-to-create-a-basic-mod-for-oni/)
@@ -126,6 +150,7 @@ plus, per GUID:
 * https://github.com/javisar/ONI-Modloader
 
 ### Mod examples
+
 * https://github.com/Sgt-Imalas/Sgt_Imalas-Oni-Mods
 * https://github.com/aki-art/ONI-Mods
 * https://github.com/peterhaneve/ONIMods

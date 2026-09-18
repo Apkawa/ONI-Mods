@@ -1,6 +1,7 @@
 # Paths 
 
-- **Game dlls:** `~/ONI/dlls`
+- **Game root (ro):** `~/ONI/game/`
+- **Game dlls (ro):** `~/ONI/game/OxygenNotIncluded_Data/Managed/`
 - **Location for store mods:** `./.tmp/build_mod_dir/`
 - **Location for game log:** `~/ONI/logs/Oxygen Not Included/Player.log`
 - In the agent sandbox `~/ONI` is **read-only** (workspace-write policy): the
@@ -53,11 +54,15 @@
 - Game runtime fact: `KMod/DLLLoader` loads **every** `*.dll` in a mod folder, finds
   ≤1 `UserMod2` subclass per assembly, and creates one `Harmony` per mod folder.
 
-# Docs and example mods
+# Docs
+
+- ./docs/i18n.md (cheatsheet for i18n location)
+
+## Additional docs and example mods
 
 root: /home/apkawa/code/ONI_MODS/
 
-## Library source
+### Library source
 
 - ./lib_sources/Assembly-CSharp/ - decompiled Assembly-CSharp.dll 
 - ./lib_sources/Assembly-CSharp-firstpass/ - decompiled Assembly-CSharp-firstpass.dll 
@@ -65,13 +70,13 @@ root: /home/apkawa/code/ONI_MODS/
 - ./lib_sources/peterhaneve_ONIMods/PLib* - PLib sources
 
 
-## Docs and guides
+### Docs and guides
 
 - ./example_mods/Oxygen-Not-Included-Modding_wiki
 - ./example_mods/Oxygen-Not-Included-Modding
 
 
-## Mods (for example)
+### Mods (for example)
 
 - ./example_mods/ - A collection for examples
 - ./lib_sources/peterhaneve_ONIMods/

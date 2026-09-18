@@ -25,6 +25,24 @@
   produce the patch. Perfectionism is not required; a working first draft is the
   goal.
 
+# Logging
+
+- Use PLib's `PUtil.LogDebug` / `LogWarning` / `LogError` (from `PLibCore.PUtil`)
+  for mod logging.
+- The mod name is prefixed **automatically**: `PUtil` prepends
+  `[PLib/{calling assembly}]` (via `Assembly.GetCallingAssembly().GetNameSafe()`).
+  Do **not** repeat the mod name in the message.
+- Format placeholder strings with PLib's `.F(...)` extension (`String.Format` style).
+- Verbose diagnostic logs go inside `#if DEBUG` so they are compiled out of release
+  builds; error/warning logs that signal a real problem stay unconditional.
+- Logs land in the game log: `~/ONI/logs/Oxygen Not Included/Player.log`.
+
+```csharp
+#if DEBUG
+    PUtil.LogDebug("TryBuild postfix: клетка {0} — найден кандидат {1}".F(c, local.name));
+#endif
+```
+
 # Tools
 
 - `DOTNET_ROLL_FORWARD=Major ~/.dotnet/tools/ilspycmd ~/ONI/dlls/Assembly-CSharp.dll -o ./Assembly-CSharp -p` (decompile game code)

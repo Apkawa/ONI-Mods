@@ -16,7 +16,7 @@ namespace OxygenNotIncluded.Mods
         public override void OnLoad(Harmony harmony)
         {
             base.OnLoad(harmony);
-            PUtil.LogDebug("[SizeInTooltip] Build <date> commit=<hash>");
+            PUtil.LogDebug("Build <date> commit=<hash>");
 
             // The prefix is attached PROGRAMMATICALLY (no [HarmonyPatch] attributes):
             // base.OnLoad runs Harmony's PatchAll, which only applies types carrying
@@ -51,12 +51,14 @@ namespace OxygenNotIncluded.Mods
             MethodInfo drawInstructions = AccessTools.Method(typeof(HoverTextConfiguration), nameof(HoverTextConfiguration.DrawInstructions), new[] { typeof(HoverTextScreen), typeof(HoverTextDrawer) });
             if (drawInstructions == null)
             {
-                PUtil.LogError("[SizeInTooltip] could not resolve HoverTextConfiguration.DrawInstructions(HoverTextScreen, HoverTextDrawer) — patch skipped (game build mismatch?)");
+                PUtil.LogError("could not resolve HoverTextConfiguration.DrawInstructions(HoverTextScreen, HoverTextDrawer) — patch skipped (game build mismatch?)");
             }
             else
             {
                 harmony.Patch(drawInstructions, prefix: new HarmonyMethod(typeof(HoverTextConfiguration_DrawInstructions_SizeInTooltip__Patch), nameof(HoverTextConfiguration_DrawInstructions_SizeInTooltip__Patch.Prefix)));
-                PUtil.LogDebug("[SizeInTooltip] size prefix attached to {0}".F(drawInstructions));
+#if DEBUG
+                PUtil.LogDebug("size prefix attached to {0}".F(drawInstructions));
+#endif
             }
         }
     }
@@ -155,7 +157,7 @@ namespace OxygenNotIncluded.Mods
                 if (!loggedError)
                 {
                     loggedError = true;
-                    PUtil.LogError("[SizeInTooltip] unexpected failure in DrawInstructions prefix, size line suppressed: " + e);
+                    PUtil.LogError("unexpected failure in DrawInstructions prefix, size line suppressed: " + e);
                 }
             }
         }

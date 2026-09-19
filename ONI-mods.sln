@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilLibs", "UtilLibs\UtilLi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SizeInTooltip", "SizeInTooltip\SizeInTooltip.csproj", "{9E88A8DC-1A59-4339-BA4E-F2246D3BD181}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReplaceBuildingMaterial", "ReplaceBuildingMaterial\ReplaceBuildingMaterial.csproj", "{D75547EA-D35D-4217-97AE-348CC2E99918}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{9E88A8DC-1A59-4339-BA4E-F2246D3BD181}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E88A8DC-1A59-4339-BA4E-F2246D3BD181}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E88A8DC-1A59-4339-BA4E-F2246D3BD181}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D75547EA-D35D-4217-97AE-348CC2E99918}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D75547EA-D35D-4217-97AE-348CC2E99918}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D75547EA-D35D-4217-97AE-348CC2E99918}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D75547EA-D35D-4217-97AE-348CC2E99918}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

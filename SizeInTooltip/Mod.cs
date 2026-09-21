@@ -1,11 +1,11 @@
 using System;
-using System.Reflection;
 using HarmonyLib;
 using KMod;
 using STRINGS;
 using UnityEngine;
 
 using PeterHan.PLib.Core;
+using UtilLibs;
 
 // Namespace keeps the `OxygenNotIncluded` walk-up so unqualified game types
 // (DragTool, HoverTextConfiguration, HoverTextDrawer, Grid) resolve without extra usings.
@@ -47,19 +47,8 @@ namespace OxygenNotIncluded.Mods
             // DrawInstructions is protected in the game source, but the game
             // assembly is publicized at build time (Directory.Build.props
             // Publicize=true), so it is public in the compiled reference and
-            // AccessTools resolves it without any reflection flags.
-            MethodInfo drawInstructions = AccessTools.Method(typeof(HoverTextConfiguration), nameof(HoverTextConfiguration.DrawInstructions), new[] { typeof(HoverTextScreen), typeof(HoverTextDrawer) });
-            if (drawInstructions == null)
-            {
-                PUtil.LogError("could not resolve HoverTextConfiguration.DrawInstructions(HoverTextScreen, HoverTextDrawer) — patch skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(drawInstructions, prefix: new HarmonyMethod(typeof(HoverTextConfiguration_DrawInstructions_SizeInTooltip__Patch), nameof(HoverTextConfiguration_DrawInstructions_SizeInTooltip__Patch.Prefix)));
-#if DEBUG
-                PUtil.LogDebug("size prefix attached to {0}".F(drawInstructions));
-#endif
-            }
+            // PatchUtil resolves it without any reflection flags.
+            PatchUtil.TryPatch(harmony, typeof(HoverTextConfiguration), nameof(HoverTextConfiguration.DrawInstructions), new[] { typeof(HoverTextScreen), typeof(HoverTextDrawer) }, "size prefix", prefix: new HarmonyMethod(typeof(HoverTextConfiguration_DrawInstructions_SizeInTooltip__Patch), nameof(HoverTextConfiguration_DrawInstructions_SizeInTooltip__Patch.Prefix)));
         }
     }
 

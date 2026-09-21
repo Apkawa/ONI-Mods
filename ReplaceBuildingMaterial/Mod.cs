@@ -6,6 +6,7 @@ using KMod;
 using UnityEngine;
 
 using PeterHan.PLib.Core;
+using UtilLibs;
 
 
 // Namespace keeps the `OxygenNotIncluded` walk-up so unqualified game types
@@ -35,15 +36,7 @@ namespace OxygenNotIncluded.Mods
             // (BuildingLoader.cs:219), so the injection below is all the placement/
             // completion flow consults. NO [HarmonyPatch] attributes: attached
             // programmatically, so PatchAll (UserMod2.OnLoad) ignores the patch class.
-            MethodInfo addBuildingDef = FindMethod(typeof(Assets), "AddBuildingDef", typeof(BuildingDef));
-            if (addBuildingDef == null)
-            {
-                PUtil.LogError("could not resolve Assets.AddBuildingDef(BuildingDef) — replacement metadata postfix skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(addBuildingDef, postfix: new HarmonyMethod(typeof(Assets_AddBuildingDef_ReplaceBuildingMaterial__Patch), nameof(Assets_AddBuildingDef_ReplaceBuildingMaterial__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(Assets), "AddBuildingDef", new[] { typeof(BuildingDef) }, "replacement metadata postfix", postfix: new HarmonyMethod(typeof(Assets_AddBuildingDef_ReplaceBuildingMaterial__Patch), nameof(Assets_AddBuildingDef_ReplaceBuildingMaterial__Patch.Postfix)));
 
             // Stage 4: BuildTool.TryBuild(int) — PRIVATE instance method (BuildTool.cs:307),
             // the single choke point every drag funnels through (DragTool.OnDragTool →
@@ -58,29 +51,13 @@ namespace OxygenNotIncluded.Mods
             // otherwise let create a replacement plan; the exact-overlap case (case 1) and
             // the no-candidate case (case 5) are left to run natively. Attached programmatically;
             // NO [HarmonyPatch] attribute (PatchAll in UserMod2.OnLoad would ignore it anyway).
-            MethodInfo tryBuild = FindMethod(typeof(BuildTool), "TryBuild", typeof(int));
-            if (tryBuild == null)
-            {
-                PUtil.LogError("could not resolve BuildTool.TryBuild(int) — shifted/rotated drag-rejection prefix skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(tryBuild, prefix: new HarmonyMethod(typeof(BuildTool_TryBuild_ReplaceBuildingMaterial__Patch), nameof(BuildTool_TryBuild_ReplaceBuildingMaterial__Patch.Prefix)), postfix: new HarmonyMethod(typeof(BuildTool_TryBuild_ReplaceBuildingMaterial__Patch), nameof(BuildTool_TryBuild_ReplaceBuildingMaterial__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildTool), "TryBuild", new[] { typeof(int) }, "shifted/rotated drag-rejection prefix", prefix: new HarmonyMethod(typeof(BuildTool_TryBuild_ReplaceBuildingMaterial__Patch), nameof(BuildTool_TryBuild_ReplaceBuildingMaterial__Patch.Prefix)), postfix: new HarmonyMethod(typeof(BuildTool_TryBuild_ReplaceBuildingMaterial__Patch), nameof(BuildTool_TryBuild_ReplaceBuildingMaterial__Patch.Postfix)));
 
             // Stage 6 (debug round 9): BuildTool.OnDragTool(int, int) — protected override
             // (BuildTool.cs:302-305). DEBUG-only drag-entry proof log (see the patch
             // class above): distinguishes "click never reached the drag tool" from a
             // silent pass-through inside TryBuild.
-            MethodInfo onDragTool = FindMethod(typeof(BuildTool), "OnDragTool", typeof(int), typeof(int));
-            if (onDragTool == null)
-            {
-                PUtil.LogError("could not resolve BuildTool.OnDragTool(int, int) — drag-entry log skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(onDragTool, postfix: new HarmonyMethod(typeof(BuildTool_OnDragTool_ReplaceBuildingMaterial__Patch), nameof(BuildTool_OnDragTool_ReplaceBuildingMaterial__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildTool), "OnDragTool", new[] { typeof(int), typeof(int) }, "drag-entry log", postfix: new HarmonyMethod(typeof(BuildTool_OnDragTool_ReplaceBuildingMaterial__Patch), nameof(BuildTool_OnDragTool_ReplaceBuildingMaterial__Patch.Postfix)));
 
             // Stage 5: BuildingDef.IsValidReplaceLocation(Vector3, Orientation, ObjectLayer, ObjectLayer)
             // — public, returns bool (BuildingDef.cs:1184-1207); its native body is purely
@@ -91,16 +68,7 @@ namespace OxygenNotIncluded.Mods
             // The postfix therefore overwrites `__result` in BOTH directions for mod defs:
             // white only for a cross-material exact overlap, red otherwise (R11 Q3 row 4).
             // FindMethod's 4-arity match selects only this overload.
-            MethodInfo isValidReplaceLocation = FindMethod(typeof(BuildingDef), "IsValidReplaceLocation",
-                typeof(Vector3), typeof(Orientation), typeof(ObjectLayer), typeof(ObjectLayer));
-            if (isValidReplaceLocation == null)
-            {
-                PUtil.LogError("could not resolve BuildingDef.IsValidReplaceLocation(Vector3, Orientation, ObjectLayer, ObjectLayer) — preview-tint postfix skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(isValidReplaceLocation, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidReplaceLocation_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_IsValidReplaceLocation_ReplaceBuildingMaterial__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "IsValidReplaceLocation", new[] { typeof(Vector3), typeof(Orientation), typeof(ObjectLayer), typeof(ObjectLayer) }, "preview-tint postfix", postfix: new HarmonyMethod(typeof(BuildingDef_IsValidReplaceLocation_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_IsValidReplaceLocation_ReplaceBuildingMaterial__Patch.Postfix)));
 
             // Stage 6 (debug round): BuildingDef.IsValidPlaceLocation(GameObject, Vector3,
             // Orientation, out string) — public 4-arg overload (BuildingDef.cs:1098-1102);
@@ -113,16 +81,7 @@ namespace OxygenNotIncluded.Mods
             // misleading text. Same-material overlap keeps the red "занято" (the spec
             // verdict). FindMethod's byref-normalized 4-arity match selects only this
             // overload (TryPlace goes straight to the 6-arg overload, unaffected).
-            MethodInfo isValidPlaceLocation4 = FindMethod(typeof(BuildingDef), "IsValidPlaceLocation",
-                typeof(GameObject), typeof(Vector3), typeof(Orientation), typeof(string));
-            if (isValidPlaceLocation4 == null)
-            {
-                PUtil.LogError("could not resolve BuildingDef.IsValidPlaceLocation(GameObject, Vector3, Orientation, out string) — hover-text postfix skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(isValidPlaceLocation4, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_IsValidPlaceLocation_ReplaceBuildingMaterial__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "IsValidPlaceLocation", new[] { typeof(GameObject), typeof(Vector3), typeof(Orientation), typeof(string) }, "hover-text postfix", postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_IsValidPlaceLocation_ReplaceBuildingMaterial__Patch.Postfix)));
 
             // Stage 6 (debug round 10, root-cause fix): BuildingDef.ArePowerPortsInValidPositions
             // (GameObject, int, Orientation, out string) — PRIVATE (BuildingDef.cs:1391-1421),
@@ -137,15 +96,7 @@ namespace OxygenNotIncluded.Mods
             // user-reported "white ghost, no plan" on the big transformer. The postfix
             // lifts the verdict ONLY for a mod-def cross-material exact overlap whose
             // occupied port cells are owned by the replacement candidate itself.
-            MethodInfo arePowerPorts = FindMethod(typeof(BuildingDef), "ArePowerPortsInValidPositions", typeof(GameObject), typeof(int), typeof(Orientation), typeof(string));
-            if (arePowerPorts == null)
-            {
-                PUtil.LogError("could not resolve BuildingDef.ArePowerPortsInValidPositions(GameObject, int, Orientation, out string) — power-port overlap fix skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(arePowerPorts, postfix: new HarmonyMethod(typeof(BuildingDef_ArePowerPortsInValidPositions_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_ArePowerPortsInValidPositions_ReplaceBuildingMaterial__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "ArePowerPortsInValidPositions", new[] { typeof(GameObject), typeof(int), typeof(Orientation), typeof(string) }, "power-port overlap fix", postfix: new HarmonyMethod(typeof(BuildingDef_ArePowerPortsInValidPositions_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_ArePowerPortsInValidPositions_ReplaceBuildingMaterial__Patch.Postfix)));
 
             // Stage 6 (debug round 10): same fix for conduit ports —
             // BuildingDef.AreConduitPortsInValidPositions(GameObject, int, Orientation,
@@ -154,15 +105,7 @@ namespace OxygenNotIncluded.Mods
             // 19 / solid 23 (the *ConduitConnection layers) occupied by anything other
             // than source_go fails the placement, so gas/liquid/solid conduit buildings
             // hit the identical wall on exact overlap.
-            MethodInfo areConduitPorts = FindMethod(typeof(BuildingDef), "AreConduitPortsInValidPositions", typeof(GameObject), typeof(int), typeof(Orientation), typeof(string));
-            if (areConduitPorts == null)
-            {
-                PUtil.LogError("could not resolve BuildingDef.AreConduitPortsInValidPositions(GameObject, int, Orientation, out string) — conduit-port overlap fix skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(areConduitPorts, postfix: new HarmonyMethod(typeof(BuildingDef_AreConduitPortsInValidPositions_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_AreConduitPortsInValidPositions_ReplaceBuildingMaterial__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "AreConduitPortsInValidPositions", new[] { typeof(GameObject), typeof(int), typeof(Orientation), typeof(string) }, "conduit-port overlap fix", postfix: new HarmonyMethod(typeof(BuildingDef_AreConduitPortsInValidPositions_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_AreConduitPortsInValidPositions_ReplaceBuildingMaterial__Patch.Postfix)));
 
             // Stage 6 (debug round 12): same fix for logic ports —
             // BuildingDef.AreLogicPortsInValidPositions(GameObject, int, out string),
@@ -172,15 +115,7 @@ namespace OxygenNotIncluded.Mods
             // vis-elements, so an exact overlap of a logic-port building always
             // self-conflicts. (Round-10 assumption that this gate can never fire
             // for a prefab was wrong — proven by the clean-session log.)
-            MethodInfo areLogicPorts = FindMethod(typeof(BuildingDef), "AreLogicPortsInValidPositions", typeof(GameObject), typeof(int), typeof(string));
-            if (areLogicPorts == null)
-            {
-                PUtil.LogError("could not resolve BuildingDef.AreLogicPortsInValidPositions(GameObject, int, out string) — logic-port overlap fix skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(areLogicPorts, postfix: new HarmonyMethod(typeof(BuildingDef_AreLogicPortsInValidPositions_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_AreLogicPortsInValidPositions_ReplaceBuildingMaterial__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "AreLogicPortsInValidPositions", new[] { typeof(GameObject), typeof(int), typeof(string) }, "logic-port overlap fix", postfix: new HarmonyMethod(typeof(BuildingDef_AreLogicPortsInValidPositions_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_AreLogicPortsInValidPositions_ReplaceBuildingMaterial__Patch.Postfix)));
 
             // Round 13: BuildingDef.MarkOverlappingPorts(GameObject, GameObject) —
             // PUBLIC instance (BuildingDef.cs:941-954), called from MarkArea for every
@@ -188,15 +123,7 @@ namespace OxygenNotIncluded.Mods
             // MarkArea tags the old building HasInvalidPorts → InvalidPortReporter
             // disables it (Functional flag) + "overlapping ports" status/notification,
             // and the tag survives plan cancellation (round-13 user report).
-            MethodInfo markOverlappingPorts = FindMethod(typeof(BuildingDef), "MarkOverlappingPorts", typeof(GameObject), typeof(GameObject));
-            if (markOverlappingPorts == null)
-            {
-                PUtil.LogError("could not resolve BuildingDef.MarkOverlappingPorts(GameObject, GameObject) — stale-port-tag suppression skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(markOverlappingPorts, prefix: new HarmonyMethod(typeof(BuildingDef_MarkOverlappingPorts_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_MarkOverlappingPorts_ReplaceBuildingMaterial__Patch.Prefix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "MarkOverlappingPorts", new[] { typeof(GameObject), typeof(GameObject) }, "stale-port-tag suppression", prefix: new HarmonyMethod(typeof(BuildingDef_MarkOverlappingPorts_ReplaceBuildingMaterial__Patch), nameof(BuildingDef_MarkOverlappingPorts_ReplaceBuildingMaterial__Patch.Prefix)));
 
             // Stage 6: Constructable.FinishConstruction(UtilityConnections, WorkerBase)
             // — PRIVATE void instance method (Constructable.cs:223-291). The mandatory
@@ -213,61 +140,9 @@ namespace OxygenNotIncluded.Mods
             // like the other targets via the byref/NonPublic-tolerant FindMethod;
             // attached programmatically; NO [HarmonyPatch] attribute (PatchAll in
             // UserMod2.OnLoad would ignore it anyway).
-            MethodInfo finishConstruction = FindMethod(typeof(Constructable), "FinishConstruction", typeof(UtilityConnections), typeof(WorkerBase));
-            if (finishConstruction == null)
-            {
-                PUtil.LogError("could not resolve Constructable.FinishConstruction(UtilityConnections, WorkerBase) — completion fix-up prefix skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(finishConstruction, prefix: new HarmonyMethod(typeof(Constructable_FinishConstruction_ReplaceBuildingMaterial__Patch), nameof(Constructable_FinishConstruction_ReplaceBuildingMaterial__Patch.Prefix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(Constructable), "FinishConstruction", new[] { typeof(UtilityConnections), typeof(WorkerBase) }, "completion fix-up prefix", prefix: new HarmonyMethod(typeof(Constructable_FinishConstruction_ReplaceBuildingMaterial__Patch), nameof(Constructable_FinishConstruction_ReplaceBuildingMaterial__Patch.Prefix)));
         }
 
-        /// <summary>
-        /// Resolves a method by name + per-parameter underlying type, normalizing
-        /// byref parameters: an `out T` parameter is reported by the runtime as
-        /// T& (IsByRef), so both sides are reduced to the underlying type before
-        /// comparing (ParameterType.GetElementType() on T& yields T). First full
-        /// match wins, null if none — callers log a skip rather than crash.
-        /// BindingFlags.Static included so the declared-only scan also finds the
-        /// static Assets.AddBuildingDef target; instance lookups are unaffected —
-        /// no C# signature is both static and instance.
-        /// </summary>
-        private static MethodInfo FindMethod(Type type, string name, params Type[] underlyingTypes)
-        {
-            foreach (MethodInfo m in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
-            {
-                if (m.Name != name)
-                {
-                    continue;
-                }
-                ParameterInfo[] ps = m.GetParameters();
-                if (ps.Length != underlyingTypes.Length)
-                {
-                    continue;
-                }
-                bool match = true;
-                for (int i = 0; i < ps.Length; i++)
-                {
-                    Type pt = ps[i].ParameterType;
-                    if (pt.IsByRef)
-                    {
-                        pt = pt.GetElementType();
-                    }
-                    if (pt != underlyingTypes[i])
-                    {
-                        match = false;
-                        break;
-                    }
-                }
-                if (match)
-                {
-                    return m;
-                }
-            }
-            return null;
-        }
 
         // Stage 3: every def this mod's Assets.AddBuildingDef postfix has injected
         // replacement metadata into. Populated in the postfix; robust marker for the

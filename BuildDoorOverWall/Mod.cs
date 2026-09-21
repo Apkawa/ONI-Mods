@@ -4,6 +4,7 @@ using System.Reflection;
 using HarmonyLib;
 using KMod;
 using UnityEngine;
+using UtilLibs;
 
 using PeterHan.PLib.Core;
 
@@ -51,61 +52,24 @@ namespace OxygenNotIncluded.Mods
             // check (4 parameters) guarantees the 6-arg canonical overload is not
             // matched, so the survival drag flow (TryPlace, BuildingDef.cs:467,
             // which uses the 6-arg overload) is never touched.
-            MethodInfo validPlace = FindMethod(typeof(BuildingDef), "IsValidPlaceLocation",
-                typeof(GameObject), typeof(Vector3), typeof(Orientation), typeof(string));
-            if (validPlace == null)
-            {
-#if DEBUG
-                PUtil.LogDebug("BuildingDef.IsValidPlaceLocation(GameObject, Vector3, Orientation, out string) не найдена — hover-text/visualizer postfix пропущен");
-#endif
-                PUtil.LogError("could not resolve BuildingDef.IsValidPlaceLocation(GameObject, Vector3, Orientation, out string) — hover-text/visualizer postfix skipped (game build mismatch?)");
-            }
-            else
-            {
-#if DEBUG
-                PUtil.LogDebug("Патчу hover-text/visualizer postfix на {0}".F(validPlace));
-#endif
-                harmony.Patch(validPlace, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation_DoorReplacement__Patch), nameof(BuildingDef_IsValidPlaceLocation_DoorReplacement__Patch.Postfix)));
-            }
-            MethodInfo validReplace = FindMethod(typeof(BuildingDef), "IsValidReplaceLocation",
-                typeof(Vector3), typeof(Orientation), typeof(ObjectLayer), typeof(ObjectLayer));
-            if (validReplace == null)
-            {
-#if DEBUG
-                PUtil.LogDebug("BuildingDef.IsValidReplaceLocation(Vector3, Orientation, ObjectLayer, ObjectLayer) не найдена — preview-tint postfix пропущен");
-#endif
-                PUtil.LogError("could not resolve BuildingDef.IsValidReplaceLocation(Vector3, Orientation, ObjectLayer, ObjectLayer) — preview-tint postfix skipped (game build mismatch?)");
-            }
-            else
-            {
-#if DEBUG
-                PUtil.LogDebug("Патчу preview-tint postfix на {0}".F(validReplace));
-#endif
-                harmony.Patch(validReplace, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidReplaceLocation_DoorReplacement__Patch), nameof(BuildingDef_IsValidReplaceLocation_DoorReplacement__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "IsValidPlaceLocation",
+                new[] { typeof(GameObject), typeof(Vector3), typeof(Orientation), typeof(string) },
+                "hover-text/visualizer postfix",
+                postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation_DoorReplacement__Patch), nameof(BuildingDef_IsValidPlaceLocation_DoorReplacement__Patch.Postfix)));
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "IsValidReplaceLocation",
+                new[] { typeof(Vector3), typeof(Orientation), typeof(ObjectLayer), typeof(ObjectLayer) },
+                "preview-tint postfix",
+                postfix: new HarmonyMethod(typeof(BuildingDef_IsValidReplaceLocation_DoorReplacement__Patch), nameof(BuildingDef_IsValidReplaceLocation_DoorReplacement__Patch.Postfix)));
             // 3. Stage 2.1: BuildTool.TryBuild(int) — private method, resolved like the others.
             // Патчинг для случая когда дверь ставим верхним концом в стену, а нижним - в воздухе
-            MethodInfo tryBuild = FindMethod(typeof(BuildTool), "TryBuild", typeof(int));
-            if (tryBuild == null)
-            {
-                PUtil.LogError("could not resolve BuildTool.TryBuild(int) — upper-cell replacement fallback postfix skipped (game build mismatch?)");
-            }
-            else
-            {
-              // Патчинг для случая когда дверь ставим верхним концом в стену, а нижним - в воздухе
-                harmony.Patch(tryBuild, postfix: new HarmonyMethod(typeof(BuildTool_TryBuild_DoorReplacement__Patch), nameof(BuildTool_TryBuild_DoorReplacement__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildTool), "TryBuild", new[] { typeof(int) },
+                "upper-cell replacement fallback postfix",
+                postfix: new HarmonyMethod(typeof(BuildTool_TryBuild_DoorReplacement__Patch), nameof(BuildTool_TryBuild_DoorReplacement__Patch.Postfix)));
             // 4. Stage 2.2: Assets.AddBuildingDef(BuildingDef) — public static; FindMethod now
             // includes BindingFlags.Static so the declared-only scan finds it.
-            MethodInfo addBuildingDef = FindMethod(typeof(Assets), "AddBuildingDef", typeof(BuildingDef));
-            if (addBuildingDef == null)
-            {
-                PUtil.LogError("could not resolve Assets.AddBuildingDef(BuildingDef) — all-door replacement metadata postfix skipped (game build mismatch?)");
-            }
-            else
-            {
-                harmony.Patch(addBuildingDef, postfix: new HarmonyMethod(typeof(Assets_AddBuildingDef_DoorReplacement__Patch), nameof(Assets_AddBuildingDef_DoorReplacement__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(Assets), "AddBuildingDef", new[] { typeof(BuildingDef) },
+                "all-door replacement metadata postfix",
+                postfix: new HarmonyMethod(typeof(Assets_AddBuildingDef_DoorReplacement__Patch), nameof(Assets_AddBuildingDef_DoorReplacement__Patch.Postfix)));
             // 5. Stage 3: BuildingDef.IsValidPlaceLocation(GameObject, int, Orientation,
             // bool, out string, bool) — the 6-arg canonical overload every placement
             // validity check funnels into (all the other overloads and the game's
@@ -117,22 +81,10 @@ namespace OxygenNotIncluded.Mods
             // flips that one failure so the native TryReplaceTile replacement fallback
             // (BuildTool.cs:377-379) proceeds. FindMethod arity (6 parameters) matches
             // only this overload.
-            MethodInfo validPlace6 = FindMethod(typeof(BuildingDef), "IsValidPlaceLocation",
-                typeof(GameObject), typeof(int), typeof(Orientation), typeof(bool), typeof(string), typeof(bool));
-            if (validPlace6 == null)
-            {
-#if DEBUG
-                PUtil.LogDebug("BuildingDef.IsValidPlaceLocation(GameObject, int, Orientation, bool, out string, bool) не найдена — HasDoor-bypass postfix пропущен");
-#endif
-                PUtil.LogError("could not resolve BuildingDef.IsValidPlaceLocation(GameObject, int, Orientation, bool, out string, bool) — 6-arg HasDoor-bypass postfix skipped (game build mismatch?)");
-            }
-            else
-            {
-#if DEBUG
-                PUtil.LogDebug("Патчу 6-arg HasDoor-bypass postfix на {0}".F(validPlace6));
-#endif
-                harmony.Patch(validPlace6, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation6_DoorReplacement__Patch), nameof(BuildingDef_IsValidPlaceLocation6_DoorReplacement__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "IsValidPlaceLocation",
+                new[] { typeof(GameObject), typeof(int), typeof(Orientation), typeof(bool), typeof(string), typeof(bool) },
+                "6-arg HasDoor-bypass postfix",
+                postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation6_DoorReplacement__Patch), nameof(BuildingDef_IsValidPlaceLocation6_DoorReplacement__Patch.Postfix)));
             // 6. Bug A fix: BuildingDef.IsValidBuildLocation(GameObject, int,
             // Orientation, bool, out string) — the CORE int overload (BuildingDef.cs:1221)
             // that every Vector3 overload funnels into and that Constructable's
@@ -152,39 +104,16 @@ namespace OxygenNotIncluded.Mods
             // FindMethod arity (5 parameters: GameObject, int, Orientation, bool, string)
             // matches only this overload (the Vector3 overloads are 4-arg and
             // 5-arg-with-Vector3).
-            MethodInfo validBuild = FindMethod(typeof(BuildingDef), "IsValidBuildLocation",
-                typeof(GameObject), typeof(int), typeof(Orientation), typeof(bool), typeof(string));
-            if (validBuild == null)
-            {
-#if DEBUG
-                PUtil.LogDebug("BuildingDef.IsValidBuildLocation(GameObject, int, Orientation, bool, out string) не найдена — construction-recheck postfix пропущен");
-#endif
-                PUtil.LogError("could not resolve BuildingDef.IsValidBuildLocation(GameObject, int, Orientation, bool, out string) — construction-recheck postfix skipped (game build mismatch?)");
-            }
-            else
-            {
-#if DEBUG
-                PUtil.LogDebug("Патчу construction-recheck postfix на {0}".F(validBuild));
-#endif
-                harmony.Patch(validBuild, postfix: new HarmonyMethod(typeof(BuildingDef_IsValidBuildLocation_DoorReplacement__Patch), nameof(BuildingDef_IsValidBuildLocation_DoorReplacement__Patch.Postfix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "IsValidBuildLocation",
+                new[] { typeof(GameObject), typeof(int), typeof(Orientation), typeof(bool), typeof(string) },
+                "construction-recheck postfix",
+                postfix: new HarmonyMethod(typeof(BuildingDef_IsValidBuildLocation_DoorReplacement__Patch), nameof(BuildingDef_IsValidBuildLocation_DoorReplacement__Patch.Postfix)));
             // 7. Crash fix: Constructable.FinishConstruction(UtilityConnections, WorkerBase)
             // — private instance method, resolved by the same FindMethod scan.
-            MethodInfo finishConstruction = FindMethod(typeof(Constructable), "FinishConstruction", typeof(UtilityConnections), typeof(WorkerBase));
-            if (finishConstruction == null)
-            {
-#if DEBUG
-                PUtil.LogDebug("Constructable.FinishConstruction(UtilityConnections, WorkerBase) не найдена — duplicate-candidate prefix пропущен");
-#endif
-                PUtil.LogError("could not resolve Constructable.FinishConstruction(UtilityConnections, WorkerBase) — duplicate-candidate prefix skipped (game build mismatch?)");
-            }
-            else
-            {
-#if DEBUG
-                PUtil.LogDebug("Патчу duplicate-candidate prefix на {0}".F(finishConstruction));
-#endif
-                harmony.Patch(finishConstruction, prefix: new HarmonyMethod(typeof(Constructable_FinishConstruction_DoorReplacement__Patch), nameof(Constructable_FinishConstruction_DoorReplacement__Patch.Prefix)));
-            }
+            PatchUtil.TryPatch(harmony, typeof(Constructable), "FinishConstruction",
+                new[] { typeof(UtilityConnections), typeof(WorkerBase) },
+                "duplicate-candidate prefix",
+                prefix: new HarmonyMethod(typeof(Constructable_FinishConstruction_DoorReplacement__Patch), nameof(Constructable_FinishConstruction_DoorReplacement__Patch.Prefix)));
             // 8. Spec feature 2: BuildingDef.TryReplaceTile(GameObject, Vector3,
             // Orientation, IList<Tag>, int) — the WORKING overload (BuildingDef.cs:487):
             // the facadeID overload (BuildingDef.cs:508) delegates to it
@@ -199,67 +128,10 @@ namespace OxygenNotIncluded.Mods
             // Grid.Objects[cell, ReplacementLayer] and PostProcessBuild(null) is a
             // no-op. FindMethod arity (5 parameters) matches only this overload — the
             // facadeID overload has 6.
-            MethodInfo tryReplaceTile = FindMethod(typeof(BuildingDef), "TryReplaceTile",
-                typeof(GameObject), typeof(Vector3), typeof(Orientation), typeof(IList<Tag>), typeof(int));
-            if (tryReplaceTile == null)
-            {
-#if DEBUG
-                PUtil.LogDebug("BuildingDef.TryReplaceTile(GameObject, Vector3, Orientation, IList<Tag>, int) не найдена — same-PrefabID door-over-door prefix пропущен");
-#endif
-                PUtil.LogError("could not resolve BuildingDef.TryReplaceTile(GameObject, Vector3, Orientation, IList<Tag>, int) — same-PrefabID door-over-door prefix skipped (game build mismatch?)");
-            }
-            else
-            {
-#if DEBUG
-                PUtil.LogDebug("Патчу same-PrefabID door-over-door prefix на {0}".F(tryReplaceTile));
-#endif
-                harmony.Patch(tryReplaceTile, prefix: new HarmonyMethod(typeof(BuildingDef_TryReplaceTile_SameDoorPrefab__Patch), nameof(BuildingDef_TryReplaceTile_SameDoorPrefab__Patch.Prefix)));
-            }
-        }
-
-        /// <summary>
-        /// Resolves a method by name + per-parameter underlying type, normalizing
-        /// byref parameters: an `out T` parameter is reported by the runtime as
-        /// T& (IsByRef), so both sides are reduced to the underlying type before
-        /// comparing (ParameterType.GetElementType() on T& yields T). First full
-        /// match wins, null if none — callers log a skip rather than crash.
-        /// BindingFlags.Static was added (Stage 2.2) so the declared-only scan also
-        /// finds the static Assets.AddBuildingDef target; instance lookups are
-        /// unaffected — no C# signature is both static and instance.
-        /// </summary>
-        private static MethodInfo FindMethod(Type type, string name, params Type[] underlyingTypes)
-        {
-            foreach (MethodInfo m in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
-            {
-                if (m.Name != name)
-                {
-                    continue;
-                }
-                ParameterInfo[] ps = m.GetParameters();
-                if (ps.Length != underlyingTypes.Length)
-                {
-                    continue;
-                }
-                bool match = true;
-                for (int i = 0; i < ps.Length; i++)
-                {
-                    Type pt = ps[i].ParameterType;
-                    if (pt.IsByRef)
-                    {
-                        pt = pt.GetElementType();
-                    }
-                    if (pt != underlyingTypes[i])
-                    {
-                        match = false;
-                        break;
-                    }
-                }
-                if (match)
-                {
-                    return m;
-                }
-            }
-            return null;
+            PatchUtil.TryPatch(harmony, typeof(BuildingDef), "TryReplaceTile",
+                new[] { typeof(GameObject), typeof(Vector3), typeof(Orientation), typeof(IList<Tag>), typeof(int) },
+                "same-PrefabID door-over-door prefix",
+                prefix: new HarmonyMethod(typeof(BuildingDef_TryReplaceTile_SameDoorPrefab__Patch), nameof(BuildingDef_TryReplaceTile_SameDoorPrefab__Patch.Prefix)));
         }
 
         // Stage 3: shared LIVE replacement-tag list, ASSIGNED (the same instance) to

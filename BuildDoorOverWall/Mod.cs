@@ -85,6 +85,21 @@ namespace OxygenNotIncluded.Mods
                 new[] { typeof(GameObject), typeof(int), typeof(Orientation), typeof(bool), typeof(string), typeof(bool) },
                 "6-arg HasDoor-bypass postfix",
                 postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation6_DoorReplacement__Patch), nameof(BuildingDef_IsValidPlaceLocation6_DoorReplacement__Patch.Postfix)));
+             // 5b. Stage 5: the SAME 6-arg canonical overload — let a door be placed OVER
+             // another door when the only native failure is the logic-port overlap
+             // (the dragged door's own input port on its anchor cell coincides with the
+             // live door's still-registered physical port — see the class docs below).
+             // A SECOND postfix on the same method: Harmony chains both (0Harmony
+             // MethodCreator AddFinalizers calls every postfix in order), the two are
+             // mutually exclusive by def scope (wall-like vs door) and the new one bails
+             // immediately when the wall postfix has already flipped __result — so the
+             // existing wall/tile-over-door bypass stays byte-identical.
+             // Programmatic FindMethod arity (6 parameters) matches only this overload,
+             // same as the registration above.
+             PatchUtil.TryPatch(harmony, typeof(BuildingDef), "IsValidPlaceLocation",
+                 new[] { typeof(GameObject), typeof(int), typeof(Orientation), typeof(bool), typeof(string), typeof(bool) },
+                 "6-arg door-over-door logic-port bypass postfix",
+                 postfix: new HarmonyMethod(typeof(BuildingDef_IsValidPlaceLocation6_DoorPortBypass__Patch), nameof(BuildingDef_IsValidPlaceLocation6_DoorPortBypass__Patch.Postfix)));
             // 6. Bug A fix: BuildingDef.IsValidBuildLocation(GameObject, int,
             // Orientation, bool, out string) — the CORE int overload (BuildingDef.cs:1221)
             // that every Vector3 overload funnels into and that Constructable's
@@ -906,6 +921,18 @@ namespace OxygenNotIncluded.Mods
 #if DEBUG
                 PUtil.LogDebug("orientation={0}; __instance.buildingOrientation={1}".F(orientation, __instance.buildingOrientation));
 #endif
+                // The native TryReplaceTile runs its own 6-arg
+                // IsValidPlaceLocation(replace_tile: true) check (BuildingDef.cs:490)
+                // and bails with a null plan when it fails, printing no reason —
+                // re-run the same call (same argument shape as the shared gate) to log
+                // the native fail reason.
+#if DEBUG
+                string fail_reason;
+                if (!def.IsValidPlaceLocation(visualizer, anchorCell, orientation, replace_tile: true, out fail_reason, restrictToActiveWorld: false))
+                {
+                    PUtil.LogDebug("TryBuild postfix: def={0} cell={1} orient={2} => FAIL native IsValidPlaceLocation(replace_tile:true) failed: {3}".F(def.PrefabID, anchorCell, orientation, fail_reason));
+                }
+#endif
                 GameObject plan = def.TryReplaceTile(visualizer, pos, orientation, selected, __instance.facadeID);
                 Grid.Objects[anchorCell, (int)def.ReplacementLayer] = plan;
 
@@ -1019,6 +1046,90 @@ namespace OxygenNotIncluded.Mods
                 {
                     return;
                 }
+                __result = true;
+            }
+        }
+
+        // 5b. Stage 5: door-over-door logic-port bypass, on the SAME 6-arg canonical
+        // overload as the wall/tile HasDoor-bypass postfix above (a second, separate
+        // postfix — the two scopes are mutually exclusive by def type: wall-like vs
+        // door, and this one bails when the wall postfix already flipped __result).
+        // THE BUG: every ported door def (Door, PressureDoor, ...) declares its logic
+        // INPUT port on its anchor cell (DoorConfig.CreateSingleInputPortList(new
+        // CellOffset(0,0))); the live door's physical port is already registered in
+        // Game.Instance.logicCircuitManager (LogicPorts.CreatePhysicalPorts,
+        // LogicPorts.cs:221/256), so when the dragged ghost's port cell coincides with
+        // the live door's port cell, IsAreaClear's final
+        // AreLogicPortsInValidPositions (BuildingDef.cs:789 -> 1558-1619) reports
+        // HELP_BUILDLOCATION_LOGIC_PORTS_OBSTRUCTED and TryReplaceTile (BuildingDef.cs:490)
+        // returns a null plan — the door-over-door drag silently does nothing.
+        // THE CONFLICTING PORT BELONGS TO THE VERY DOOR BEING REPLACED, so the
+        // replacement must be allowed. Generic, no building-ID allow-lists: any door
+        // def (IsDoorDef) over any live door def — covers PressureDoor over Door and
+        // Door over PressureDoor alike. Flips __result and clears fail_reason ONLY
+        // when: the native call failed, replace_tile is true (NEVER flip TryPlace),
+        // the fail reason is exactly the logic-ports string, and the anchor cell has
+        // a live Replaceable door candidate (the shared TryFindReplacementCandidate,
+        // whose found candidate must itself be a door here).
+        // WHY `ref string __4` WORKS IN THIS 0Harmony v2 BUILD (unlike the byref
+        // positions the 4-arg postfix above could not use): EmitCallParameter
+        // (MethodCreatorTools.cs:420-765) resolves the positional `__4` index and, for
+        // an original `out` parameter (IsOut) against a patch parameter of the SAME
+        // byref-ness (flag3 == flag4, MethodCreatorTools.cs:713-715), emits a plain
+        // Ldarg of the byref slot — the postfix receives the ORIGINAL out slot's
+        // address, so it can read the reason AND write `null` back; the write-back
+        // persists because RestoreArgumentArray (MethodCreator.cs:372-375) runs only
+        // for patches declaring `__args`, which this one does not. The comparison uses
+        // LocString's implicit `string` operator (LocString.cs:44). NO
+        // [HarmonyPatch] attributes on purpose: attached programmatically in OnLoad
+        // via harmony.Patch(...).
+        public static class BuildingDef_IsValidPlaceLocation6_DoorPortBypass__Patch
+        {
+            public static void Postfix(BuildingDef __instance, GameObject __0, int __1, Orientation __2, bool __3, ref string __4, ref bool __result)
+            {
+                if (__result)
+                {
+                    return;
+                }
+                // Never flip the replace_tile:false path (TryPlace, BuildingDef.cs:467):
+                // that must keep failing so the build takes the replacement fallback,
+                // never a plain build alongside the live door.
+                if (!__3)
+                {
+                    return;
+                }
+                // Door-over-door only; the wall/tile direction is the other postfix's
+                // exclusive scope.
+                if (!IsDoorDef(__instance))
+                {
+                    return;
+                }
+                // The ONLY failing check we may bypass is the logic-port overlap —
+                // compare against the game's own STRINGS constant (never a localized
+                // literal): AreLogicPortsInValidPositions (BuildingDef.cs:1558-1619)
+                // is the sole setter of this reason in this call chain.
+                if (__4 != STRINGS.UI.TOOLTIPS.HELP_BUILDLOCATION_LOGIC_PORTS_OBSTRUCTED)
+                {
+                    return;
+                }
+                // The conflicting port must belong to the very door being replaced:
+                // the anchor cell must hold a live, tag-matching, Replaceable door
+                // (the shared candidate search, which for door defs accepts exactly
+                // the doors in the shared ReplacementTags list).
+                GameObject candidate;
+                BuildingComplete candidateComplete;
+                if (!TryFindReplacementCandidate(__instance, __1, __2, out candidate, out candidateComplete))
+                {
+                    return;
+                }
+                if (candidateComplete == null || !IsDoorDef(candidateComplete.Def))
+                {
+                    return;
+                }
+#if DEBUG
+                PUtil.LogDebug("IsValidPlaceLocation6 postfix: def={0} cell={1} — обход logic-порт конфликта (кандидат {2})".F(__instance.PrefabID, __1, candidate.name));
+#endif
+                __4 = null;
                 __result = true;
             }
         }

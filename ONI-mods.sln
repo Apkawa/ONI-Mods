@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SizeInTooltip", "SizeInTool
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReplaceBuildingMaterial", "ReplaceBuildingMaterial\ReplaceBuildingMaterial.csproj", "{D75547EA-D35D-4217-97AE-348CC2E99918}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BestBuildDryWall", "BestBuildDryWall\BestBuildDryWall.csproj", "{4AB6DBA8-0FFD-4076-91A2-A54A90C5B875}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{D75547EA-D35D-4217-97AE-348CC2E99918}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D75547EA-D35D-4217-97AE-348CC2E99918}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D75547EA-D35D-4217-97AE-348CC2E99918}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AB6DBA8-0FFD-4076-91A2-A54A90C5B875}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AB6DBA8-0FFD-4076-91A2-A54A90C5B875}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AB6DBA8-0FFD-4076-91A2-A54A90C5B875}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AB6DBA8-0FFD-4076-91A2-A54A90C5B875}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<!--    <Import Project="$(MSBuildThisFileDirectory)/../Directory.Build.props" />-->
+
+    <!-- General Package Properties
+         (Authors/Copyright/RepositoryUrl come from the common Directory.Build.props) -->
+    <PropertyGroup>
+        <PackageId>BestBuildDryWall</PackageId>
+        <Version>0.0.1</Version>
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+
+
+    <!-- Build Properties -->
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>default</LangVersion>
+        <AssemblyName>$(PackageId)</AssemblyName>
+        <RootNamespace>$(PackageId)</RootNamespace>
+        <IsMod>true</IsMod>
+        <GenerateMetadata>true</GenerateMetadata>
+<!--        Enable if added external dll like PLib -->
+        <IsPacked>true</IsPacked>
+    </PropertyGroup>
+
+
+    <!-- Mod Info -->
+    <PropertyGroup>
+        <ModName>$(PackageId)</ModName>
+        <ModDescription />
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <OutDir>bin</OutDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\UtilLibs\UtilLibs.csproj" />
+    </ItemGroup>
+
+    <!-- Feature 1 (Shift detection) needs UnityEngine.Input. In the game's Unity
+         build the Input class lives in UnityEngine.InputLegacyModule.dll — not in
+         UnityEngine.dll / CoreModule, which Directory.Build.props references.
+         Private=False: reference-only, resolved from the game's own dll at runtime
+         (same treatment as the other UnityEngine refs). -->
+    <ItemGroup>
+        <Reference Include="UnityEngine.InputLegacyModule">
+            <HintPath>$(GameLibsFolder)/UnityEngine.InputLegacyModule.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+    </ItemGroup>
+
+
+</Project>

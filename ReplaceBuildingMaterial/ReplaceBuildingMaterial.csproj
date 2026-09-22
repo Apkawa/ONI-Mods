@@ -26,8 +26,8 @@
 
     <!-- Mod Info -->
     <PropertyGroup>
-        <ModName>$(PackageId)</ModName>
-        <ModDescription />
+        <ModName>Replace Building Material</ModName>
+        <ModDescription>Place the same building exactly on its own position with a different material, without demolishing it first.</ModDescription>
         <!-- Workshop publishedfileid: 0 = первая публикация; после — реальный id -->
         <WorkshopItemId>0</WorkshopItemId>
     </PropertyGroup>

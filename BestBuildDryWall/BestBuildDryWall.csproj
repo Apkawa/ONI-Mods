@@ -26,8 +26,8 @@
 
     <!-- Mod Info -->
     <PropertyGroup>
-        <ModName>$(PackageId)</ModName>
-        <ModDescription />
+        <ModName>Best Build Dry Wall</ModName>
+        <ModDescription>Speeds up drywall: place a plan across a whole rectangle in one drag and restyle built drywall instantly without rebuilding.</ModDescription>
         <!-- Workshop publishedfileid: 0 = первая публикация; после — реальный id -->
         <WorkshopItemId>0</WorkshopItemId>
     </PropertyGroup>

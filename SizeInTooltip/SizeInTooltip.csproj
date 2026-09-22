@@ -26,8 +26,8 @@
 
     <!-- Mod Info -->
     <PropertyGroup>
-        <ModName>SizeInTooltip</ModName>
-        <ModDescription />
+        <ModName>Size In Tooltip</ModName>
+        <ModDescription>Shows the drag-rectangle selection size (dimensions and area) in the tooltip for Dig, Demolish, Cancel and other tools.</ModDescription>
         <!-- Workshop publishedfileid: 0 = первая публикация; после — реальный id -->
         <WorkshopItemId>0</WorkshopItemId>
     </PropertyGroup>

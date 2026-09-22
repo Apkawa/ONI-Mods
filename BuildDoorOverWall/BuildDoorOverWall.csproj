@@ -26,8 +26,8 @@
 
     <!-- Mod Info -->
     <PropertyGroup>
-        <ModName>$(PackageId)</ModName>
-        <ModDescription />
+        <ModName>Build Door Over Wall</ModName>
+        <ModDescription>Place one built building on top of another without demolishing it first — including walls and floor tiles over doors.</ModDescription>
         <!-- Workshop publishedfileid: 0 = первая публикация; после — реальный id -->
         <WorkshopItemId>0</WorkshopItemId>
     </PropertyGroup>

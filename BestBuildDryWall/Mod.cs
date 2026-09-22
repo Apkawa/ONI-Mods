@@ -684,26 +684,69 @@ namespace OxygenNotIncluded.Mods
         // ghost set to the drag rect while Shift is held. Releasing Shift
         // mid-drag ends the session: the mode then falls back to Brush, so the
         // game's Box placement loop on mouse up is skipped and the drag cancels.
+        //
+        // Refinement (shift-release frame): releasing Shift mid-drag also hides
+        // the native box frame — vanilla hides it only in the mouse-up Box
+        // branch (DragTool.cs:239-243), which is skipped once the mode has
+        // fallen back to Brush — and removes the Box size text, which vanilla
+        // clears only on click-up (DragTool.cs:233) and would otherwise float
+        // forever. Re-pressing Shift during the still-in-progress drag (LMB
+        // held) re-shows the frame; the vanilla Box branch of OnMouseMove
+        // (DragTool.cs:366-399) keeps updating its position/size on every move.
         public static class DragTool_OnMouseMove__Patch
         {
             public static void Postfix(DragTool __instance, Vector3 cursorPos)
             {
-                if (!ShiftRectSession.Active)
+                if (ShiftRectSession.Active)
                 {
+                    if (!(__instance is BuildTool bt))
+                    {
+                        // Safety: the session only exists under a build tool.
+                        ShiftRectSession.End("not a build tool");
+                        return;
+                    }
+                    if (!ShiftRectSession.ShiftHeld())
+                    {
+                        ShiftRectSession.End("shift released");
+                        // Hide the frame (Stage 1 covers the mouse-up hide; the
+                        // vanilla Box hide branch is unreachable after a
+                        // mid-drag shift release).
+                        GameObject areaVisualizer = __instance.areaVisualizer;
+                        if (areaVisualizer != null && areaVisualizer.activeSelf)
+                        {
+                            areaVisualizer.SetActive(false);
+#if DEBUG
+                            PUtil.LogDebug("box area visualizer hidden on shift release mid-drag".F());
+#endif
+                        }
+                        // The size text floats until the next click-up if we do
+                        // not remove it here (RemoveCurrentAreaText is a public
+                        // DragTool method, DragTool.cs:180-187, and is
+                        // self-guarded on an empty guid).
+                        __instance.RemoveCurrentAreaText();
+                        return;
+                    }
+                    ShiftRectSession.Update(bt, __instance.downPos, cursorPos);
                     return;
                 }
-                if (!(__instance is BuildTool bt))
+                // Re-press flow: Shift held again during an in-progress drag
+                // (LMB still held, session already ended) re-shows the frame.
+                // The tool/def gate mirrors BuildTool_GetMode__Patch.Prefix
+                // exactly; the `dragging` gate (private field, DragTool.cs:44 —
+                // true only between click-down and click-up/cancel/disable)
+                // keeps mere hover from ever showing the frame. In the normal
+                // flow the frame is already active and the final guard makes
+                // this a no-op.
+                BuildTool? wallTool = __instance as BuildTool;
+                if (wallTool != null && wallTool.def != null && wallTool.def.PrefabID == "ExteriorWall"
+                    && ShiftRectSession.ShiftHeld() && __instance.dragging
+                    && __instance.areaVisualizer != null && !__instance.areaVisualizer.activeSelf)
                 {
-                    // Safety: the session only exists under a build tool.
-                    ShiftRectSession.End("not a build tool");
-                    return;
+                    __instance.areaVisualizer.SetActive(true);
+#if DEBUG
+                    PUtil.LogDebug("box area visualizer re-shown on shift re-press mid-drag".F());
+#endif
                 }
-                if (!ShiftRectSession.ShiftHeld())
-                {
-                    ShiftRectSession.End("shift released");
-                    return;
-                }
-                ShiftRectSession.Update(bt, __instance.downPos, cursorPos);
             }
         }
 
@@ -734,6 +777,20 @@ namespace OxygenNotIncluded.Mods
                 if (ShiftRectSession.Active)
                 {
                     ShiftRectSession.End("mouse up");
+                }
+                // Vanilla hides the box frame ONLY in its Box/Line branch
+                // (DragTool.cs:239-243); when Shift is released before mouse up
+                // that branch is skipped and the frame — a child of the tool
+                // transform — sticks to the cursor. The borrowed instance is
+                // only ever SetActive-toggled (never destroyed), so hiding it
+                // here is safe and survives the session.
+                GameObject areaVisualizer = __instance.areaVisualizer;
+                if (areaVisualizer != null && areaVisualizer.activeSelf)
+                {
+                    areaVisualizer.SetActive(false);
+#if DEBUG
+                    PUtil.LogDebug("box area visualizer hidden on mouse up".F());
+#endif
                 }
             }
         }

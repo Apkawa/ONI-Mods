@@ -1,22 +1,32 @@
-# BuildDoorOverWall
+Extends the game's building replacement mechanism: you can place one built building on top of another without manually demolishing it — including the reverse direction, walls and floor tiles over doors.
 
-Расширяет механизм замены построек в игре: можно ставить одно построенное здание поверх другого, не снося его вручную — в том числе «обратная» замена: дверь → стена или плитка пола.
+<!-- Mandatory DLC compatibility matrix, rendered as images -->
+![DLC1YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/assets/Dlc1Yes.png)
+![DLC2YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc2Yes.png)
+![DLC3YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc3Yes.png)
+![DLC4YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc4Yes.png)
+![DLC5YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc5Yes.png)
+![VanillaYES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/VanillaYes.png)
 
-## Что делает
+# Features
 
-- **Дверь на стену** (исходная фича): перетащите дверь на клетку со стеной — стена уничтожается, дверь ставится поверх.
-- **Стена на дверь** (обратное направление): перетащите стеновое здание (наружная стена / «гипсокартон», стеклянная наружная стена, теплоизоляционный блок) на установленную дверь — дверь уничтожается, стройматериалы возвращаются роботу, панель ставится в клетку сброса. Вторая клетка двери остаётся пустой.
-- **Плитка на дверь**: то же самое работает для напольных плиток — «клетка», металлическая клетка, теплоизолированная плитка и прочие напольные плитки: плитка ставится в клетку сброса, дверь сносится, материалы возвращаются.
-- **Дверь на дверь (разные типы)**: например, ручные герметичные двери поверх обычных дверей — старая дверь уничтожается, материалы возвращаются, новая дверь строится.
+* **Door over wall** (the original feature): drag a door onto a wall cell — the wall is destroyed and the door is placed over it.
+* **Wall over door** (reverse direction): drag a wall building (outer wall / drywall, glass outer wall, insulation block) onto an installed door — the door is demolished, materials are returned to the robot, and the panel is placed in the drop cell. The door's second cell stays empty.
+* **Floor tile over door**: the same works for floor tiles — cage, metal cage, insulation tile and other floor tiles: the tile is placed in the drop cell, the door is demolished, and materials are returned.
+* **Door over door (different types)**: for example, manual airlocks over regular doors — the old door is destroyed, materials are returned, and the new door is built.
 
-## Ограничения
+# Limitations
 
-- **Дверь такого же типа не заменяется** (один и тот же `PrefabID`, даже с другим материалом) — намеренно, эта тема вынесена в отдельный мод.
-- **Не работает в песочнице / мгновенной постройке** (превью показывает белым, но построено ничего не будет).
-- Когда верхний конец двери ставится в стену, дверь становится **зеркальным AirLock** (с портами) — особенность ориентации.
-- На одну дверь ставится одна панель/плитка в одну клетку; вторая клетка двери остаётся пустой.
-- Запечатанные POI-двери (например, в секторе Gravitas) заменять нельзя.
+* A door of the same type is not replaced (same `PrefabID`, even with a different material) — intentionally, that is a separate mod.
+* Does not work in sandbox / instant building (the preview shows white, but nothing gets built).
+* When the door's top end is placed into a wall, the door becomes a mirrored Airlock (with ports) — an orientation quirk.
+* One panel/tile per door, in one cell; the door's second cell stays empty.
+* Sealed POI doors (for example, in Gravitas sectors) cannot be replaced.
 
-## Скриншот
+# Changelog
 
-<!-- TODO: добавить скриншот, например `![BuildDoorOverWall](screenshot.png)` -->
+* 2026-09-22: initial Doors over walls; walls/floor tiles over doors; different-type door over door.
+
+# Source and Support
+
+In case of problems with this mod, please open an issue on the [GitHub source code webpage](https://github.com/Apkawa/ONI-Mods). Source code for all of my mods is also located at this link.

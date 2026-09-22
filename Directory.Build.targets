@@ -57,6 +57,22 @@
     </ItemGroup>
 	</Target>
 
+	<!--Convert the mod's README.md into Steam BBCode (README.txt) via the
+	     markdown_to_bbcodesteam CLI from the Converter.MarkdownToBBCodeNM.Tool package
+	     (version kept in sync with Directory.Build.props).-->
+	<Target Name="GenerateReadmeBbcode" AfterTargets="Build"
+			Condition="'$(Configuration)' == 'Release' and '$(DoNotBuildAsMod)' != 'true' and Exists('$(ProjectDir)README.md')"
+	>
+		<PropertyGroup>
+			<ReadmeBbcodePath>$(TargetDir)README.txt</ReadmeBbcodePath>
+			<!-- Tools folder of the Converter.MarkdownToBBCodeNM.Tool package (keep in
+			     sync with the version in Directory.Build.props) -->
+			<BbcodeToolPath>$([System.IO.Path]::Combine('$(NuGetPackageRoot)', 'converter.markdowntobbcodenm.tool', '1.0.0.29', 'tools', 'net8.0', 'any', 'Converter.MarkdownToBBCodeNM.Tool.dll'))</BbcodeToolPath>
+		</PropertyGroup>
+		<Exec Command="dotnet &quot;$(BbcodeToolPath)&quot; -i &quot;$(ProjectDir)README.md&quot; -o &quot;$(ReadmeBbcodePath)&quot;" />
+		<Message Text="[MSBuild] Generated README.txt (BBCode) at $(ReadmeBbcodePath)" Importance="high" />
+	</Target>
+
 
 	<!--Merges all dlls in the output folder into a single dll.
 	     Drives the cross-platform dotnet-ilrepack CLI (local tool manifest in
@@ -78,14 +94,14 @@
 		<Exec Command="dotnet &quot;$(IlrepackToolPath)&quot; /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; $(RepackAssemblyArgs) /lib:&quot;$(GameLibsFolder)&quot;" />
 	</Target>
 
-	<PropertyGroup>
+	<!--Copies the mod dll, the two yaml files and everything inside the ModAssets folder to the target mod folder-->
+  <PropertyGroup>
 		<ModBuildFlavor Condition="'$(Configuration)' == 'Release'">release</ModBuildFlavor>
 		<ModBuildFlavor Condition="'$(Configuration)' != 'Release'">dev</ModBuildFlavor>
-		<TargetFolder Condition="'$(GameLibsFolder)' != '../Lib'">$(ModFolder)\$(TargetName)_$(ModBuildFlavor)\</TargetFolder>
-		<TargetFolder Condition="'$(GameLibsFolder)' == '../Lib'">../Builds\$(TargetName)</TargetFolder>
+		<ModTargetFolder Condition="'$(GameLibsFolder)' != '../Lib'">$(ModFolder)\$(TargetName)_$(ModBuildFlavor)\</ModTargetFolder>
+		<ModTargetFolder Condition="'$(GameLibsFolder)' == '../Lib'">../Builds\$(TargetName)</ModTargetFolder>
 	</PropertyGroup>
 
-	<!--Copies the mod dll, the two yaml files and everything inside the ModAssets folder to the target mod folder-->
 	<Target Name="CopyModsToDevFolder" AfterTargets="ILRepack" Condition="'$(DoNotBuildAsMod)' != 'true'">
 
 		<Message Text="Executing CopyDLLs task" Importance="High" />
@@ -105,14 +121,70 @@
 			$(TargetDir)mod_info.yaml;
 		  "
 
-		  DestinationFolder="$(TargetFolder)"/>
+		  DestinationFolder="$(ModTargetFolder)"/>
 
-		<Message Text="Copy ModAssets to $(TargetFolder)" Importance="High"></Message>
+		<Copy
+		  SourceFiles="
+			$(TargetDir)README.txt;
+		  "
+		  DestinationFolder="$(ModTargetFolder)"
+			Condition="Exists('$(TargetDir)README.txt')"
+		/>
 
-		<Copy SourceFiles="@(ModAssets)" DestinationFolder="$(TargetFolder)\%(RecursiveDir)" SkipUnchangedFiles="false" Condition="'$(GameLibsFolder)' == '../Lib' Or '$(SkipAssetClone)' != 'true'"/>
+		<Message Text="Copy ModAssets to $(ModTargetFolder)" Importance="High"></Message>
+
+		<Copy SourceFiles="@(ModAssets)"
+			DestinationFolder="$(ModTargetFolder)\%(RecursiveDir)"
+			SkipUnchangedFiles="false"
+			Condition="'$(GameLibsFolder)' == '../Lib' Or '$(SkipAssetClone)' != 'true'"/>
 
 		<Message Text="Copied build files" Importance="High" />
 
+	</Target>
+
+
+	<!--Write workshop_build.vdf file-->
+	<Target Name="GenerateSteamVdf" AfterTargets="GenerateReadmeBbcode"
+			Condition="'$(Configuration)' == 'Release' and '$(DoNotBuildAsMod)' != 'true' and Exists('$(ProjectDir)README.md')">
+		<!-- Steam workshop local-publish config (steamcmd / Oxygen Not Included Uploader input).
+		     The game never reads this file. -->
+		<PropertyGroup>
+			<ReadmePath>$(TargetDir)README.txt</ReadmePath>
+			<VdfOutputPath>$(TargetDir)workshop_build.vdf</VdfOutputPath>
+			<PreviewName Condition="'$(PreviewName)' == ''">preview.png</PreviewName>
+			<WorkshopVisibility Condition="'$(WorkshopVisibility)' == ''">2</WorkshopVisibility>
+			<WorkshopAppId Condition="'$(WorkshopAppId)' == ''">457140</WorkshopAppId>
+		</PropertyGroup>
+
+		<PropertyGroup>
+			<!-- Read the whole README directly so the description keeps its raw newlines
+			     (a multi-line quoted string is the proven working form for VDF files),
+			     then escape quotes for the VDF format. Not via @(ReadmeLines): expanding
+			     an item list in a property joins the lines with ';' and percent-escapes
+			     the content (e.g. '**' -> %2a%2a) in this MSBuild, which would corrupt
+			     the VDF text. -->
+			<SanitizedDescription>$([System.IO.File]::ReadAllText('$(ReadmePath)').Replace('"', '\"').Trim())</SanitizedDescription>
+
+			<VdfContent>
+"workshopitem"
+{
+	"appid"		"$(WorkshopAppId)"
+	"publishedfileid"	"$(WorkshopItemId)"
+	"contentfolder"	"$(ModTargetFolder.TrimEnd('/').TrimEnd('\'))"
+	"previewfile"	"$(ProjectDir)$(PreviewName)"
+	"visibility"	"$(WorkshopVisibility)"
+	"title"		"$(ModName)"
+	"description"	"$(SanitizedDescription)"
+	"changenote"	"Version: $(Version)"
+}
+			</VdfContent>
+		</PropertyGroup>
+
+		<!-- No Encoding attribute: MSBuild 17 (dotnet SDK) defaults WriteLinesToFile to
+		     UTF-8 without BOM. (The classic-MSBuild string value 'UTF8NoBOM' is rejected
+		     here as MSB3098; 'UTF-8' would emit a BOM, which can break the VDF parser.) -->
+		<WriteLinesToFile File="$(VdfOutputPath)" Lines="$(VdfContent)" Overwrite="true" />
+		<Message Text="[MSBuild] Generated workshop_build.vdf at $(VdfOutputPath)" Importance="high" />
 	</Target>
 
 

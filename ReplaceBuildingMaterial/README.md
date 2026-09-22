@@ -1,32 +1,31 @@
-# ReplaceBuildingMaterial
+Allows placing the same building exactly on its own position with a different material, without demolishing it first. The game's native building replacement logic does the rest: when construction finishes, the old building is dismantled, its materials are returned to the robot, and the new one is built on the freed cell.
 
-Разрешает поставить то же самое здание ровно на свою собственную позицию, но из другого материала — без предварительного сноса. Сам разбор и возврат материалов делает штатный механизм замены построек игры: по завершении строительства старое здание разбирается, его стройматериалы возвращаются роботу, новое строится на освобождённой клетке. Мод только разрешает размещение — логику игры не reimplementирует.
+<!-- Mandatory DLC compatibility matrix, rendered as images -->
+![DLC1YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/assets/Dlc1Yes.png)
+![DLC2YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc2Yes.png)
+![DLC3YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc3Yes.png)
+![DLC4YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc4Yes.png)
+![DLC5YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc5Yes.png)
+![VanillaYES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/VanillaYes.png)
 
-## Что делает
+# Features
 
-- **Здание на то же здание (другой материал)**: выберите в меню постройки то же здание, что уже построено, и перетащите его ровно на его позицию — призрак подсветится **белым**, клик создаёт план замены. Примеры проверенных зданий: насосы (жидкость/газ), генераторы (уголь, газ, нефть), батареи, трансформатор, автопосев, терморегулятор, горн.
-- **Многоклеточные здания** работают так же — главное, чтобы anchor-клетка совпала (см. Ограничения).
-- **Безопасно отменять**: отмена плана не ломает старое здание (оно продолжает работать и не получает ошибок «совпадающие порты»).
+* **Building over itself (different material)**: select the same building that is already built in the build menu and drag it exactly onto its position — the ghost highlights **white**, and a click creates a replacement plan. Verified buildings: pumps (liquid/gas), generators (coal, gas, oil), batteries, transformer, auto planter, thermostat, smelter.
+* **Multi-cell buildings** work the same way — as long as the anchor cell matches (see Limitations).
+* **Safe to cancel**: cancelling the plan does not break the old building (it keeps working without "overlapping ports" errors).
 
-## Как пользоваться
+# Limitations
 
-1. Откройте меню постройки и выберите нужное здание (то же, что уже стоит).
-2. Перетащите призрак ровно на позицию существующего здания — без сдвига и без поворота.
-3. Призрак **белый** — можно строить; клик создаёт план. **Красный** — занято (тот же материал или позиция не совпала), клик ничего не делает.
-4. Дождитесь завершения: старое здание сносится, материалы возвращаются роботу, новое строится из выбранного материала.
+* Only "plain" buildings: defs without their own native replacement semantics (doors, foundations, stairs, windows and the like are excluded).
+* Exact position match only: no rotations or offsets; a drag with an offset is rejected (the click simply does nothing).
+* The same material is not replaced: copper over copper shows a red ghost ("occupied") and nothing happens.
+* If the old building is being deconstructed at the moment of replacement, the game's stock behavior applies: the deconstruction is cancelled.
+* Walls, wires, pipes, foundations and other non-buildings are out of scope (doors have a separate mod, [BuildDoorOverWall](../BuildDoorOverWall/README.md)).
 
-## Ограничения
+# Changelog
 
-- **Только «обычные» здания**: defs, у которых нет собственной нативной семантики замены (двери, фундаменты, лестницы, окна и т. п. исключены).
-- **Только точное совпадение позиции**: без поворотов и сдвигов; drag со сдвигом отклоняется (клик просто ничего не делает).
-- **Совпадающий материал не заменяется**: медь поверх меди — призрак красный («занято»), ничего не происходит; «втихую» менять материал мод не умеет.
-- Если в момент замены на старом здании идёт де-конструкция — срабатывает штатное поведение игры: де-конструкция отменяется.
-- Стены, провода, трубы, фундаменты и прочие не-здания — вне scope (для дверей есть отдельный мод [BuildDoorOverWall](../BuildDoorOverWall/README.md)).
+* 2026-09-22: initial Same building over itself with a different material, via the game's native replacement logic.
 
-## Скриншот
+# Source and Support
 
-<!-- TODO: добавить скриншот, например `![ReplaceBuildingMaterial](screenshot.png)` -->
-
-## Сборка
-
-Часть решения `ONI-mods.sln` (см. корневой `AGENTS.md` для команды сборки).
+In case of problems with this mod, please open an issue on the [GitHub source code webpage](https://github.com/Apkawa/ONI-Mods). Source code for all of my mods is also located at this link.

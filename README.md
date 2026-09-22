@@ -6,4 +6,5 @@ Collection of mods for Oxygen Not Included.
 | ------------------------------------------------ | ------------------------------- |
 | [BuildDoorOverWall](BuildDoorOverWall/README.md) | Doors over walls; walls/floor tiles over doors; door-to-door (different types) |
 | [ReplaceBuildingMaterial](ReplaceBuildingMaterial/README.md) | Same building over itself with a different material; demolition/refund via the game's native replacement logic |
-| [BestBuildDryWall](BestBuildDryWall/README.md) | Гипсокартон: быстрое размещение прямоугольником (Shift) и мгновенная перекраска схемы без перестройки |
+| [BestBuildDryWall](BestBuildDryWall/README.md) | Drywall: fast rectangle placement (Shift) and instant restyling without rebuilding |
+| [SizeInTooltip](SizeInTooltip/README.md) | Shows the drag-selection size (dimensions and area in cells) in the tooltip for all rectangle tools |

@@ -28,6 +28,8 @@
     <PropertyGroup>
         <ModName>SizeInTooltip</ModName>
         <ModDescription />
+        <!-- Workshop publishedfileid: 0 = первая публикация; после — реальный id -->
+        <WorkshopItemId>0</WorkshopItemId>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

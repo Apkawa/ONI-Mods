@@ -126,12 +126,17 @@ plus, per GUID:
 (Both projects are already `net48`, so they just work. `DebugButton` has
 `IsPacked=true` → same ILRepack step.)
 
-## In-game logs
+## Game path locations:
+### In-game logs
 
 * Windows: `%HOMEPATH%\Documents\Klei\OxygenNotIncluded\Player.log`
 * `C:\Users\%username%\AppData\LocalLow\Klei\Oxygen Not Included\Player.log`
 * Linux: `~/.config/unity3d/Klei/Oxygen Not Included/Player.log`
 
+### Mods location
+
+* Windows: `%USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\`
+* Linux: `~/.config/unity3d/Klei/Oxygen Not Included/mods/`
 
 # Usefull mods
 

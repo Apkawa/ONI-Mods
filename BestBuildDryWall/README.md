@@ -1,18 +1,22 @@
-# BestBuildDryWall
+Speeds up drywall work: place a drywall plan across a whole rectangle in one drag, and repaint already built drywall into a different style instantly, without rebuilding.
 
-Мод, ускоряющий размещение плана гипсокартона (Drywall) и быструю перекраску.
+<!-- Mandatory DLC compatibility matrix, rendered as images -->
+![DLC1YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/assets/Dlc1Yes.png)
+![DLC2YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc2Yes.png)
+![DLC3YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc3Yes.png)
+![DLC4YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc4Yes.png)
+![DLC5YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc5Yes.png)
+![VanillaYES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/VanillaYes.png)
 
-## 1. Shift + прямоугольник — план гипсокартона
+# Features
 
-1. В режиме постройки выберите Drywall (гипсокартон).
-2. Задержите **Shift** и растяните мышью прямоугольник.
-3. Пока мышь зажата — отрисовка прямоугольника с размером (как в инструментах «копать»/«отмена») и размноженный призрак гипсокартона по всем клеткам.
-4. При отпускании мыши план гипсокартона размещается по всему прямоугольнику.
+* **Shift + rectangle — drywall plan**: select Drywall in the build menu, hold **Shift** and stretch a rectangle with the mouse. While you hold the button, the rectangle is drawn with its size (like in the Dig/Cancel tools) along with a duplicated drywall ghost across all cells; on mouse release, the drywall plan is placed over the whole rectangle.
+* **Instant restyling without rebuilding**: place Drywall with a different style (skin) over already built drywall of the same material, and the mod repaints the existing drywall in the new style — instantly, without rebuilding. Works in both the normal brush mode and the Shift-rectangle mode.
 
-## 2. Быстрая перекраска без перестройки
+# Changelog
 
-Если поверх уже построенного гипсокартона того же материала разместить Drywall с другой «Схемой» (стиль/скин), мод пакетно перекрашивает существующий гипсокартон нужным стилем — мгновенно, без перестройки. Работает в обычном режиме кисти и в Shift-режиме.
+* 2026-09-22: initial Drywall rectangle placement (Shift) and instant restyling without rebuilding.
 
-## Сборка
+# Source and Support
 
-Из корня репозитория: `dotnet build ONI-mods.sln -c Debug`. Артефакты — в `BestBuildDryWall/bin/`.
+In case of problems with this mod, please open an issue on the [GitHub source code webpage](https://github.com/Apkawa/ONI-Mods). Source code for all of my mods is also located at this link.

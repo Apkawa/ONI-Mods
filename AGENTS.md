@@ -72,6 +72,16 @@
 - Game runtime fact: `KMod/DLLLoader` loads **every** `*.dll` in a mod folder, finds
   ≤1 `UserMod2` subclass per assembly, and creates one `Harmony` per mod folder.
 
+# README documentation
+
+- All mod README files are written **in English** (see the `mod-readme` skill for
+  the rules and template).
+- **New mod:** when a mod is added, add it to the mod list in the root
+  `README.md`.
+- **Updated mod:** at the end of the work, **before archiving the task**, refresh
+  the mod's `README.md` using the `mod-readme` skill and append an entry to its
+  changelog list.
+
 # Docs
 
 - ./docs/i18n.md (cheatsheet for i18n location)

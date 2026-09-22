@@ -2,11 +2,11 @@ For all tools that select a rectangle by dragging (Dig, Demolish, Cancel and the
 
 <!-- Mandatory DLC compatibility matrix, rendered as images -->
 ![DLC1YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/assets/Dlc1Yes.png)
-![DLC2YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc2Yes.png)
-![DLC3YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc3Yes.png)
-![DLC4YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc4Yes.png)
-![DLC5YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/Dlc5Yes.png)
-![VanillaYES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/VanillaYes.png)
+![DLC2YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/assets/Dlc2Yes.png)
+![DLC3YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/assets/Dlc3Yes.png)
+![DLC4YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/assets/Dlc4Yes.png)
+![DLC5YES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/assets/Dlc5Yes.png)
+![VanillaYES](https://raw.githubusercontent.com/Apkawa/ONI-Mods/master/docs/assets/VanillaYes.png)
 
 # Features
 

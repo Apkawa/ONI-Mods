@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<!--    <Import Project="$(MSBuildThisFileDirectory)/../Directory.Build.props" />-->
+
+    <!-- General Package Properties
+         (Authors/Copyright/RepositoryUrl come from the common Directory.Build.props) -->
+    <PropertyGroup>
+        <PackageId>SpaceOverlay</PackageId>
+        <Version>0.0.1</Version>
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+
+
+    <!-- Build Properties -->
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>default</LangVersion>
+        <AssemblyName>$(PackageId)</AssemblyName>
+        <RootNamespace>$(PackageId)</RootNamespace>
+        <IsMod>true</IsMod>
+        <GenerateMetadata>true</GenerateMetadata>
+<!--        Enable if added external dll like PLib -->
+        <IsPacked>true</IsPacked>
+    </PropertyGroup>
+
+
+    <!-- Mod Info -->
+    <PropertyGroup>
+        <ModName>SpaceOverlay</ModName>
+        <ModDescription>Highlights space (vacuum) cells with a red overlay</ModDescription>
+        <!-- Workshop publishedfileid: 0 = первая публикация; после — реальный id -->
+        <WorkshopItemId>0</WorkshopItemId>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <OutDir>bin</OutDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\UtilLibs\UtilLibs.csproj" />
+    </ItemGroup>
+
+    <!-- Regenerate the overlay menu icon (ModAssets/overlay_space.png) from icon.svg
+         before every build, so the shipped PNG never drifts from the source SVG. -->
+    <Target Name="ConvertIcon" BeforeTargets="PreBuildEvent">
+        <Message Text="Converting icon.svg to ModAssets/overlay_space.png" Importance="high" />
+        <Exec Command="./make_icon.sh" WorkingDirectory="$(MSBuildProjectDirectory)" />
+    </Target>
+
+
+</Project>

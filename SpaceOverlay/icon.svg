@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <!-- Region outside the planet disc, so the far side of the ring is hidden behind the planet. -->
+    <clipPath id="outside-planet" clipPathUnits="userSpaceOnUse">
+      <path clip-rule="evenodd" d="M0 0 H48 V48 H0 Z M14 25 a10 10 0 1 0 20 0 a10 10 0 1 0 -20 0 Z"/>
+    </clipPath>
+  </defs>
+  <!-- Far (upper) half of the ring: drawn behind the planet, clipped to the outside of the disc. -->
+  <g transform="rotate(-20 24 25)">
+    <path d="M4 25 A20 7 0 0 1 44 25" fill="none" stroke="#000000" stroke-width="7" stroke-linecap="round" clip-path="url(#outside-planet)"/>
+    <path d="M4 25 A20 7 0 0 1 44 25" fill="none" stroke="#E6E6E6" stroke-width="3" stroke-linecap="round" clip-path="url(#outside-planet)"/>
+  </g>
+  <!-- Planet: red fill with a bold black outline for contrast on the dark UI. -->
+  <circle cx="24" cy="25" r="13" fill="#E14C4C"/>
+  <circle cx="24" cy="25" r="13" fill="none" stroke="#000000" stroke-width="3"/>
+  <!-- Near (lower) half of the ring: drawn in front of the planet. -->
+  <g transform="rotate(-20 24 25)">
+    <path d="M44 25 A20 7 0 0 1 4 25" fill="none" stroke="#000000" stroke-width="7" stroke-linecap="round"/>
+    <path d="M44 25 A20 7 0 0 1 4 25" fill="none" stroke="#E6E6E6" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <!-- Small 4-point star sparkle in the upper right, white fill over a black rim. -->
+  <path d="M38 6 L39.2 7.8 L40.5 9 L39.2 10.2 L38 12 L36.8 10.2 L35.5 9 L36.8 7.8 Z"
+        fill="none" stroke="#000000" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M38 6 L39.2 7.8 L40.5 9 L39.2 10.2 L38 12 L36.8 10.2 L35.5 9 L36.8 7.8 Z"
+        fill="#E6E6E6" stroke="#8A8A8A" stroke-width="1" stroke-linejoin="round"/>
+</svg>

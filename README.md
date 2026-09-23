@@ -8,3 +8,4 @@ Collection of mods for Oxygen Not Included.
 | [ReplaceBuildingMaterial](ReplaceBuildingMaterial/README.md) | Same building over itself with a different material; demolition/refund via the game's native replacement logic |
 | [BestBuildDryWall](BestBuildDryWall/README.md) | Drywall: fast rectangle placement (Shift) and instant restyling without rebuilding |
 | [SizeInTooltip](SizeInTooltip/README.md) | Shows the drag-selection size (dimensions and area in cells) in the tooltip for all rectangle tools |
+| [SpaceOverlay](SpaceOverlay/README.md) | Highlights revealed cells exposed to space (incl. walls/doors at the boundary) with a red overlay |

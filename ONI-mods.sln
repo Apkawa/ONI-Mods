@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BestBuildDryWall", "BestBui
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpaceOverlay", "SpaceOverlay\SpaceOverlay.csproj", "{B2EF5F44-AC32-4683-84A6-2D93A2C9C44E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResourceRemain", "ResourceRemain\ResourceRemain.csproj", "{0E7B2C57-9AAC-4802-AC50-DECE7EBB5AA2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{B2EF5F44-AC32-4683-84A6-2D93A2C9C44E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2EF5F44-AC32-4683-84A6-2D93A2C9C44E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B2EF5F44-AC32-4683-84A6-2D93A2C9C44E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E7B2C57-9AAC-4802-AC50-DECE7EBB5AA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E7B2C57-9AAC-4802-AC50-DECE7EBB5AA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E7B2C57-9AAC-4802-AC50-DECE7EBB5AA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E7B2C57-9AAC-4802-AC50-DECE7EBB5AA2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

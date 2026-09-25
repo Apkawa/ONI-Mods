@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<!--    <Import Project="$(MSBuildThisFileDirectory)/../Directory.Build.props" />-->
+
+    <!-- General Package Properties
+          (Authors/Copyright/RepositoryUrl come from the common Directory.Build.props) -->
+    <PropertyGroup>
+        <PackageId>ResourceRemain</PackageId>
+        <Version>0.0.1</Version>
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+
+    <!-- Build Properties -->
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>default</LangVersion>
+        <AssemblyName>$(PackageId)</AssemblyName>
+        <RootNamespace>$(PackageId)</RootNamespace>
+        <IsMod>true</IsMod>
+        <GenerateMetadata>true</GenerateMetadata>
+        <IsPacked>true</IsPacked>
+    </PropertyGroup>
+
+    <!-- Mod Info -->
+    <PropertyGroup>
+        <ModName>Resource Remain</ModName>
+        <ModDescription>Approximate per-cycle resource statistics in tooltips: consumed vs produced per cycle, how many cycles of supply are left for depleting resources, and calorie cycle estimates for each food type.</ModDescription>
+        <WorkshopItemId>0</WorkshopItemId>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <OutDir>bin</OutDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\UtilLibs\UtilLibs.csproj" />
+    </ItemGroup>
+
+    <!-- The row tooltips' MultiToggle enter/exit prefixes take
+         UnityEngine.EventSystems.PointerEventData. In the game's Unity build the
+         EventSystems types live in UnityEngine.UI.dll, which Directory.Build.props
+         does NOT reference (its UnityEngine.UI entry sits inside a comment
+         block). Private=False: reference-only, resolved from the game's own dll
+         at runtime (same treatment as the other UnityEngine refs, cf.
+         BestBuildDryWall.csproj's InputLegacyModule reference). -->
+    <ItemGroup>
+        <Reference Include="UnityEngine.UI">
+            <HintPath>$(GameLibsFolder)/UnityEngine.UI.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+    </ItemGroup>
+</Project>

@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpaceOverlay", "SpaceOverla
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResourceRemain", "ResourceRemain\ResourceRemain.csproj", "{0E7B2C57-9AAC-4802-AC50-DECE7EBB5AA2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PrinterEasyInfo", "PrinterEasyInfo\PrinterEasyInfo.csproj", "{6AA3C18A-AACB-48CF-A19A-47AFC70A4F43}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{0E7B2C57-9AAC-4802-AC50-DECE7EBB5AA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E7B2C57-9AAC-4802-AC50-DECE7EBB5AA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E7B2C57-9AAC-4802-AC50-DECE7EBB5AA2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AA3C18A-AACB-48CF-A19A-47AFC70A4F43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AA3C18A-AACB-48CF-A19A-47AFC70A4F43}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AA3C18A-AACB-48CF-A19A-47AFC70A4F43}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AA3C18A-AACB-48CF-A19A-47AFC70A4F43}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- General Package Properties
+          (Authors/Copyright/RepositoryUrl come from the common Directory.Build.props) -->
+    <PropertyGroup>
+        <PackageId>PrinterEasyInfo</PackageId>
+        <Version>1.0.1</Version>
+        <TargetFramework>net48</TargetFramework>
+        <Configurations>Debug;Release</Configurations>
+    </PropertyGroup>
+
+
+    <!-- Build Properties -->
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>default</LangVersion>
+        <AssemblyName>$(PackageId)</AssemblyName>
+        <RootNamespace>$(PackageId)</RootNamespace>
+        <IsMod>true</IsMod>
+        <GenerateMetadata>true</GenerateMetadata>
+        <!--        Enable if added external dll like PLib -->
+        <IsPacked>true</IsPacked>
+    </PropertyGroup>
+
+
+    <!-- Mod Info -->
+    <PropertyGroup>
+        <ModName>PrinterEasyInfo</ModName>
+        <ModDescription>Adds a database (Codex) info button to care-package columns in the telepad scheme selection window.</ModDescription>
+        <!-- Workshop publishedfileid: 0 = первая публикация; после — реальный id -->
+        <WorkshopItemId>0</WorkshopItemId>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <OutDir>bin</OutDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\UtilLibs\UtilLibs.csproj" />
+    </ItemGroup>
+
+    <!-- The codex button glyph is a UnityEngine.UI.Image (the game's KImage
+         derives from it). The game's UnityEngine.dll reference from
+         Directory.Build.props does not include the UI assembly (its reference
+         is commented out there), so reference it here. -->
+    <ItemGroup>
+        <Reference Include="UnityEngine.UI">
+            <HintPath>$(GameLibsFolder)/UnityEngine.UI.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+    </ItemGroup>
+
+
+</Project>

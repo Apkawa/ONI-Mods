@@ -11,3 +11,4 @@ Collection of mods for Oxygen Not Included.
 | [SpaceOverlay](SpaceOverlay/README.md) | Highlights revealed cells exposed to space (incl. walls/doors at the boundary) with a red overlay |
 | [ResourceRemain](ResourceRemain/README.md) | Shows per-cycle resource change and remaining supply estimates in the built-in resource screens and the calorie tooltip |
 | [PrinterEasyInfo](PrinterEasyInfo/README.md) | Book icon on care-package columns in the telepad scheme window; opens the item's database (Codex) entry |
+| [ResourceFieldInfo](ResourceFieldInfo/README.md) | Shows the cell count and total mass of the contiguous deposit under the cursor in the cell tooltip (Ctrl + hover) |

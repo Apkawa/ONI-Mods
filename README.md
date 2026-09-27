@@ -12,3 +12,4 @@ Collection of mods for Oxygen Not Included.
 | [ResourceRemain](ResourceRemain/README.md) | Shows per-cycle resource change and remaining supply estimates in the built-in resource screens and the calorie tooltip |
 | [PrinterEasyInfo](PrinterEasyInfo/README.md) | Book icon on care-package columns in the telepad scheme window; opens the item's database (Codex) entry |
 | [ResourceFieldInfo](ResourceFieldInfo/README.md) | Shows the cell count and total mass of the contiguous deposit under the cursor in the cell tooltip (Ctrl + hover) |
+| [MaterialFilterOverlay](MaterialFilterOverlay/README.md) | Per-material sub-filters inside the selected category of the built-in Materials Overlay (F4); e.g. highlight only gold buildings |
